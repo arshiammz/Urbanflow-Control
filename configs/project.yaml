@@ -1,0 +1,22 @@
+project:
+  name: urbanflow-control
+  version: 0.1.0
+  random_seed: 42
+  timezone: America/New_York
+
+data:
+  dataset: hvfhv
+  development_year: 2024
+  development_month: 1
+  interval_minutes: 30
+  number_of_zones: 20
+
+forecasting:
+  target: pickup_count
+  horizon_steps: 2
+  horizon_minutes: 60
+
+splits:
+  train_end: "2024-01-21T23:59:59"
+  validation_end: "2024-01-26T23:59:59"
+  test_end: "2024-01-31T23:59:59"
