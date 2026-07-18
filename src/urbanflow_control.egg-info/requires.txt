@@ -1,0 +1,14 @@
+polars
+pyarrow
+duckdb
+pydantic
+pyyaml
+typer
+rich
+httpx
+
+[dev]
+pytest
+pytest-cov
+ruff
+mypy
