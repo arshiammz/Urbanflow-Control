@@ -18,6 +18,10 @@ from urbanflow.data.download import (
     DownloadError,
     download_trip_data,
 )
+from urbanflow.data.multimonth import (
+    MultiMonthPipelineError,
+    build_multimonth_demand,
+)
 from urbanflow.data.reference import (
     download_taxi_zone_lookup,
     inspect_taxi_zone_lookup,
@@ -365,6 +369,69 @@ def build_demand(
     )
     console.print(
         f"Output: {output['path']}"
+    )
+
+
+@app.command("build-multimonth")
+def build_multimonth(
+    config_path: Annotated[
+        Path,
+        typer.Option(
+            "--config",
+            help="Path to the multi-month data pipeline configuration.",
+        ),
+    ] = Path(
+        "configs/data/multimonth.yaml"
+    ),
+) -> None:
+    """Build a resumable multi-month zone-demand dataset."""
+    console.print(
+        "Running multi-month data pipeline with "
+        f"[bold]{config_path}[/bold]..."
+    )
+
+    try:
+        report = build_multimonth_demand(
+            config_path=config_path
+        )
+    except MultiMonthPipelineError as error:
+        console.print(
+            "[bold red]"
+            f"Multi-month pipeline failed: {error}"
+            "[/bold red]"
+        )
+        raise typer.Exit(code=1) from error
+
+    execution = report["execution"]
+    combined = report["combined_output"]
+
+    console.print(
+        "[bold green]"
+        "Multi-month data pipeline completed"
+        "[/bold green]"
+    )
+    console.print(
+        f"Months: {execution['month_count']:,}"
+    )
+    console.print(
+        "Combined action: "
+        f"{execution['combined_action']}"
+    )
+    console.print(
+        f"Rows: {combined['row_count']:,}"
+    )
+    console.print(
+        f"Intervals: {combined['interval_count']:,}"
+    )
+    console.print(
+        f"Zones: {combined['zone_count']:,}"
+    )
+    console.print(
+        "Total pickups: "
+        f"{combined['total_pickups']:,}"
+    )
+    console.print(
+        f"Output: {combined['path']}"
     )
 
 
