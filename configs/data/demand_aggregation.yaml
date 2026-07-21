@@ -1,0 +1,24 @@
+dataset:
+  name: hvfhv_zone_demand
+  expected_year: 2024
+  expected_month: 1
+  timezone: America/New_York
+
+paths:
+  input: data/interim/hvfhv_2024-01_validated.parquet
+  zone_lookup: data/reference/taxi_zone_lookup.csv
+  output: data/processed/dev/zone_demand_15m_2024-01.parquet
+  report: reports/data_quality/2024-01-demand-aggregation.json
+
+aggregation:
+  interval: 15m
+
+  core_boroughs:
+    - Bronx
+    - Brooklyn
+    - Manhattan
+    - Queens
+    - Staten Island
+
+output:
+  compression: zstd

@@ -6,6 +6,10 @@ from typing import Annotated
 import typer
 from rich.console import Console
 
+from urbanflow.data.aggregation import (
+    DemandAggregationError,
+    build_zone_demand,
+)
 from urbanflow.data.audit import (
     DataAuditError,
     audit_trip_data,
@@ -284,6 +288,64 @@ def validate_data(
     )
     console.print(
         f"Output: {report['output']['path']}"
+    )
+
+
+@app.command("build-demand")
+def build_demand(
+    config_path: Annotated[
+        Path,
+        typer.Option(
+            "--config",
+            help="Path to the demand aggregation YAML configuration.",
+        ),
+    ] = Path(
+        "configs/data/demand_aggregation.yaml"
+    ),
+) -> None:
+    """Build a dense zone-by-time demand dataset."""
+    console.print(
+        "Building zone demand with "
+        f"[bold]{config_path}[/bold]..."
+    )
+
+    try:
+        report = build_zone_demand(
+            config_path=config_path
+        )
+    except DemandAggregationError as error:
+        console.print(
+            "[bold red]"
+            f"Demand aggregation failed: {error}"
+            "[/bold red]"
+        )
+        raise typer.Exit(code=1) from error
+
+    panel = report["panel"]
+    output = report["output"]
+
+    console.print(
+        "[bold green]"
+        "Demand aggregation completed"
+        "[/bold green]"
+    )
+    console.print(
+        f"Rows: {output['row_count']:,}"
+    )
+    console.print(
+        f"Intervals: {panel['interval_count']:,}"
+    )
+    console.print(
+        f"Zones: {panel['zone_count']:,}"
+    )
+    console.print(
+        f"Total pickups: {panel['total_pickups']:,}"
+    )
+    console.print(
+        f"Zero-demand rows: {panel['zero_demand_rows']:,}"
+    )
+    console.print(
+        f"Output: {output['path']}"
     )
 
 
