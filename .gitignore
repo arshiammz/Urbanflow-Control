@@ -25,10 +25,14 @@ artifacts/
 reports/**/*.json
 mlruns/
 
-# Keep directories in Git
+# Keep directory structure in Git
 !data/raw/.gitkeep
 !data/interim/.gitkeep
 !data/processed/.gitkeep
+
+# Keep small reproducible audit reports
+!reports/data_quality/
+!reports/data_quality/*-raw-audit.json
 
 # OS and editors
 .DS_Store

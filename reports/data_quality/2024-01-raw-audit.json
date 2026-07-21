@@ -1,0 +1,231 @@
+{
+  "audit_version": "0.1.0",
+  "dataset": {
+    "name": "NYC TLC HVFHV Trip Records",
+    "expected_year": 2024,
+    "expected_month": 1,
+    "expected_month_start": "2024-01-01T00:00:00",
+    "expected_next_month_start": "2024-02-01T00:00:00"
+  },
+  "file": {
+    "path": "data/raw/hvfhv/fhvhv_tripdata_2024-01.parquet",
+    "size_bytes": 472757547,
+    "parquet_rows": 19663930,
+    "parquet_columns": 24,
+    "parquet_row_groups": 19
+  },
+  "schema": {
+    "hvfhs_license_num": "String",
+    "dispatching_base_num": "String",
+    "originating_base_num": "String",
+    "request_datetime": "Datetime(time_unit='ns', time_zone=None)",
+    "on_scene_datetime": "Datetime(time_unit='ns', time_zone=None)",
+    "pickup_datetime": "Datetime(time_unit='ns', time_zone=None)",
+    "dropoff_datetime": "Datetime(time_unit='ns', time_zone=None)",
+    "PULocationID": "Int32",
+    "DOLocationID": "Int32",
+    "trip_miles": "Float64",
+    "trip_time": "Int64",
+    "base_passenger_fare": "Float64",
+    "tolls": "Float64",
+    "bcf": "Float64",
+    "sales_tax": "Float64",
+    "congestion_surcharge": "Float64",
+    "airport_fee": "Float64",
+    "tips": "Float64",
+    "driver_pay": "Float64",
+    "shared_request_flag": "String",
+    "shared_match_flag": "String",
+    "access_a_ride_flag": "String",
+    "wav_request_flag": "String",
+    "wav_match_flag": "String"
+  },
+  "required_columns": [
+    "DOLocationID",
+    "PULocationID",
+    "dropoff_datetime",
+    "hvfhs_license_num",
+    "pickup_datetime",
+    "request_datetime",
+    "trip_miles",
+    "trip_time"
+  ],
+  "missing_required_columns": [],
+  "row_count": 19663930,
+  "nulls": {
+    "hvfhs_license_num": {
+      "count": 0,
+      "percentage": 0.0
+    },
+    "dispatching_base_num": {
+      "count": 0,
+      "percentage": 0.0
+    },
+    "originating_base_num": {
+      "count": 5218737,
+      "percentage": 26.539644
+    },
+    "request_datetime": {
+      "count": 0,
+      "percentage": 0.0
+    },
+    "on_scene_datetime": {
+      "count": 5218737,
+      "percentage": 26.539644
+    },
+    "pickup_datetime": {
+      "count": 0,
+      "percentage": 0.0
+    },
+    "dropoff_datetime": {
+      "count": 0,
+      "percentage": 0.0
+    },
+    "PULocationID": {
+      "count": 0,
+      "percentage": 0.0
+    },
+    "DOLocationID": {
+      "count": 0,
+      "percentage": 0.0
+    },
+    "trip_miles": {
+      "count": 0,
+      "percentage": 0.0
+    },
+    "trip_time": {
+      "count": 0,
+      "percentage": 0.0
+    },
+    "base_passenger_fare": {
+      "count": 0,
+      "percentage": 0.0
+    },
+    "tolls": {
+      "count": 0,
+      "percentage": 0.0
+    },
+    "bcf": {
+      "count": 0,
+      "percentage": 0.0
+    },
+    "sales_tax": {
+      "count": 0,
+      "percentage": 0.0
+    },
+    "congestion_surcharge": {
+      "count": 0,
+      "percentage": 0.0
+    },
+    "airport_fee": {
+      "count": 0,
+      "percentage": 0.0
+    },
+    "tips": {
+      "count": 0,
+      "percentage": 0.0
+    },
+    "driver_pay": {
+      "count": 0,
+      "percentage": 0.0
+    },
+    "shared_request_flag": {
+      "count": 0,
+      "percentage": 0.0
+    },
+    "shared_match_flag": {
+      "count": 0,
+      "percentage": 0.0
+    },
+    "access_a_ride_flag": {
+      "count": 0,
+      "percentage": 0.0
+    },
+    "wav_request_flag": {
+      "count": 0,
+      "percentage": 0.0
+    },
+    "wav_match_flag": {
+      "count": 0,
+      "percentage": 0.0
+    }
+  },
+  "temporal_bounds": {
+    "request_datetime": {
+      "min": "2023-12-31T23:01:55",
+      "max": "2024-02-01T00:07:07"
+    },
+    "pickup_datetime": {
+      "min": "2024-01-01T00:00:00",
+      "max": "2024-01-31T23:59:59"
+    },
+    "dropoff_datetime": {
+      "min": "2024-01-01T00:02:35",
+      "max": "2024-02-01T02:10:41"
+    }
+  },
+  "month_boundary_counts": {
+    "request_before_month": 858,
+    "request_after_month": 3,
+    "pickup_before_month": 0,
+    "pickup_after_month": 0,
+    "dropoff_before_month": 0,
+    "dropoff_after_month": 6584
+  },
+  "zone_statistics": {
+    "pickup": {
+      "minimum_id": 1,
+      "maximum_id": 265,
+      "unique_count": 262
+    },
+    "dropoff": {
+      "minimum_id": 1,
+      "maximum_id": 265,
+      "unique_count": 261
+    }
+  },
+  "quality_checks": {
+    "request_after_pickup": 188251,
+    "non_positive_derived_trip_duration": 2,
+    "non_positive_trip_time": 2,
+    "negative_trip_miles": 0,
+    "trip_time_difference_over_60_seconds": 0
+  },
+  "request_to_pickup_seconds": {
+    "minimum": -2863,
+    "p01": 24.0,
+    "p50": 220.0,
+    "p95": 543.0,
+    "p99": 817.0,
+    "maximum": 73837
+  },
+  "trip_duration_seconds": {
+    "minimum": 0,
+    "p01": 191.0,
+    "p50": 912.0,
+    "p95": 2598.0,
+    "p99": 3794.0,
+    "maximum": 52060
+  },
+  "trip_time_consistency": {
+    "absolute_difference_p50_seconds": 0.0,
+    "absolute_difference_p99_seconds": 0.0
+  },
+  "trip_miles": {
+    "minimum": 0.0,
+    "p50": 2.83,
+    "p95": 16.04,
+    "p99": 26.38,
+    "maximum": 417.62
+  },
+  "provider_counts": [
+    {
+      "hvfhs_license_num": "HV0003",
+      "row_count": 14432755
+    },
+    {
+      "hvfhs_license_num": "HV0005",
+      "row_count": 5231175
+    }
+  ]
+}
