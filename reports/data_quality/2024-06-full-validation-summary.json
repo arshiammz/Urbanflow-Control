@@ -1,0 +1,78 @@
+{
+  "validation_version": "0.1.0",
+  "generated_at": "2026-07-21T15:15:17.761600+00:00",
+  "effective_config": {
+    "dataset": {
+      "expected_year": 2024,
+      "expected_month": 6,
+      "timezone": "America/New_York"
+    },
+    "paths": {
+      "input": "data/raw/hvfhv/fhvhv_tripdata_2024-06.parquet",
+      "zone_lookup": "data/reference/taxi_zone_lookup.csv",
+      "output": "data/interim/multimonth/hvfhv_2024-06_validated.parquet",
+      "report": "reports/data_quality/2024-06-full-validation-summary.json"
+    },
+    "validation": {
+      "required_columns": [
+        "hvfhs_license_num",
+        "request_datetime",
+        "pickup_datetime",
+        "dropoff_datetime",
+        "PULocationID",
+        "DOLocationID",
+        "trip_miles",
+        "trip_time"
+      ],
+      "core_boroughs": [
+        "Bronx",
+        "Brooklyn",
+        "Manhattan",
+        "Queens",
+        "Staten Island"
+      ],
+      "long_trip_duration_seconds": 14400
+    },
+    "output": {
+      "compression": "zstd",
+      "include_rejected_records": true
+    }
+  },
+  "input": {
+    "path": "data/raw/hvfhv/fhvhv_tripdata_2024-06.parquet",
+    "size_bytes": 484417715
+  },
+  "output": {
+    "path": "data/interim/multimonth/hvfhv_2024-06_validated.parquet",
+    "size_bytes": 621767213,
+    "record_count": 20123226,
+    "includes_rejected_records": true
+  },
+  "status_counts": {
+    "total": 20123226,
+    "accepted": 18959558,
+    "retained_with_flag": 1163665,
+    "rejected": 3
+  },
+  "rates": {
+    "rejection_rate": 1.5e-07,
+    "retained_with_flag_rate": 0.05782696
+  },
+  "flag_counts": {
+    "flag_missing_required_value": 0,
+    "flag_invalid_pickup_zone": 0,
+    "flag_invalid_dropoff_zone": 0,
+    "flag_pickup_outside_expected_month": 0,
+    "flag_non_positive_trip_duration": 3,
+    "flag_non_positive_trip_time": 3,
+    "flag_request_after_pickup": 183600,
+    "flag_long_trip_duration": 291,
+    "flag_pickup_non_core_zone": 859,
+    "flag_dropoff_non_core_zone": 1003956
+  },
+  "eligibility_counts": {
+    "eligible_for_demand_forecasting": 20122364,
+    "eligible_for_od_modeling": 19118581,
+    "eligible_for_wait_time_analysis": 19939623
+  }
+}

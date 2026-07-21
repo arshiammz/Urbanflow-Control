@@ -1,0 +1,305 @@
+{
+  "multimonth_pipeline_version": "0.1.0",
+  "generated_at": "2026-07-21T15:15:18.669446+00:00",
+  "effective_config": {
+    "dataset": {
+      "dataset": "hvfhv",
+      "year": 2024,
+      "start_month": 1,
+      "end_month": 6,
+      "timezone": "America/New_York"
+    },
+    "templates": {
+      "validation": "configs/data/validation.yaml",
+      "demand_aggregation": "configs/data/demand_aggregation.yaml",
+      "aggregation_interval": "15m"
+    },
+    "paths": {
+      "raw_directory": "data/raw/hvfhv",
+      "zone_lookup": "data/reference/taxi_zone_lookup.csv",
+      "interim_directory": "data/interim/multimonth",
+      "monthly_demand_directory": "data/processed/full/monthly",
+      "generated_config_directory": "artifacts/generated_configs/multimonth",
+      "combined_output": "data/processed/full/zone_demand_15m_2024-01_2024-06.parquet",
+      "report": "reports/data_quality/2024-01_2024-06-multimonth.json"
+    },
+    "execution": {
+      "download_missing": true,
+      "validate_missing": true,
+      "aggregate_missing": true,
+      "force_download": false,
+      "force_validation": false,
+      "force_aggregation": false,
+      "force_combine": false,
+      "cleanup_interim_after_aggregation": false
+    },
+    "output": {
+      "compression": "zstd"
+    }
+  },
+  "execution": {
+    "month_count": 6,
+    "combined_action": "created"
+  },
+  "frequency": {
+    "configured_interval": "15m",
+    "derived_interval_seconds": 900
+  },
+  "months": [
+    {
+      "period": "2024-01",
+      "actions": {
+        "download": "skipped",
+        "validation": "skipped_existing_demand",
+        "aggregation": "skipped",
+        "interim_cleaned": false
+      },
+      "paths": {
+        "raw": "data/raw/hvfhv/fhvhv_tripdata_2024-01.parquet",
+        "validated": "data/interim/multimonth/hvfhv_2024-01_validated.parquet",
+        "demand": "data/processed/full/monthly/zone_demand_15m_2024-01.parquet",
+        "validation_config": "artifacts/generated_configs/multimonth/2024-01-validation.yaml",
+        "aggregation_config": "artifacts/generated_configs/multimonth/2024-01-demand-aggregation.yaml",
+        "validation_report": "reports/data_quality/2024-01-full-validation-summary.json",
+        "aggregation_report": "reports/data_quality/2024-01-full-demand-aggregation.json"
+      },
+      "artifacts": {
+        "raw_exists": true,
+        "raw_size_bytes": 472757547,
+        "validated_exists": true,
+        "validated_size_bytes": 598274509,
+        "validation_report_exists": true,
+        "aggregation_report_exists": true
+      },
+      "demand": {
+        "path": "data/processed/full/monthly/zone_demand_15m_2024-01.parquet",
+        "size_bytes": 837678,
+        "row_count": 779712,
+        "interval_count": 2976,
+        "zone_count": 262,
+        "total_pickups": 19663162,
+        "zero_demand_rows": 64804,
+        "first_interval": "2024-01-01T00:00:00-05:00",
+        "last_interval": "2024-01-31T23:45:00-05:00",
+        "sha256": "2efd8c5d43bb47add108990b8ef1704eadc37600aa529c9e383a35b2aea02b0c"
+      }
+    },
+    {
+      "period": "2024-02",
+      "actions": {
+        "download": "skipped",
+        "validation": "skipped_existing_demand",
+        "aggregation": "skipped",
+        "interim_cleaned": false
+      },
+      "paths": {
+        "raw": "data/raw/hvfhv/fhvhv_tripdata_2024-02.parquet",
+        "validated": "data/interim/multimonth/hvfhv_2024-02_validated.parquet",
+        "demand": "data/processed/full/monthly/zone_demand_15m_2024-02.parquet",
+        "validation_config": "artifacts/generated_configs/multimonth/2024-02-validation.yaml",
+        "aggregation_config": "artifacts/generated_configs/multimonth/2024-02-demand-aggregation.yaml",
+        "validation_report": "reports/data_quality/2024-02-full-validation-summary.json",
+        "aggregation_report": "reports/data_quality/2024-02-full-demand-aggregation.json"
+      },
+      "artifacts": {
+        "raw_exists": true,
+        "raw_size_bytes": 462475428,
+        "validated_exists": true,
+        "validated_size_bytes": 589030317,
+        "validation_report_exists": true,
+        "aggregation_report_exists": true
+      },
+      "demand": {
+        "path": "data/processed/full/monthly/zone_demand_15m_2024-02.parquet",
+        "size_bytes": 784141,
+        "row_count": 729408,
+        "interval_count": 2784,
+        "zone_count": 262,
+        "total_pickups": 19358407,
+        "zero_demand_rows": 58674,
+        "first_interval": "2024-02-01T00:00:00-05:00",
+        "last_interval": "2024-02-29T23:45:00-05:00",
+        "sha256": "2c140a4511d4d770387475820d9680687ff2043b27fb05a1c17e68b7040b3fed"
+      }
+    },
+    {
+      "period": "2024-03",
+      "actions": {
+        "download": "skipped",
+        "validation": "created",
+        "aggregation": "created",
+        "interim_cleaned": false
+      },
+      "paths": {
+        "raw": "data/raw/hvfhv/fhvhv_tripdata_2024-03.parquet",
+        "validated": "data/interim/multimonth/hvfhv_2024-03_validated.parquet",
+        "demand": "data/processed/full/monthly/zone_demand_15m_2024-03.parquet",
+        "validation_config": "artifacts/generated_configs/multimonth/2024-03-validation.yaml",
+        "aggregation_config": "artifacts/generated_configs/multimonth/2024-03-demand-aggregation.yaml",
+        "validation_report": "reports/data_quality/2024-03-full-validation-summary.json",
+        "aggregation_report": "reports/data_quality/2024-03-full-demand-aggregation.json"
+      },
+      "artifacts": {
+        "raw_exists": true,
+        "raw_size_bytes": 507940560,
+        "validated_exists": true,
+        "validated_size_bytes": 649468634,
+        "validation_report_exists": true,
+        "aggregation_report_exists": true
+      },
+      "demand": {
+        "path": "data/processed/full/monthly/zone_demand_15m_2024-03.parquet",
+        "size_bytes": 847263,
+        "row_count": 778664,
+        "interval_count": 2972,
+        "zone_count": 262,
+        "total_pickups": 21279908,
+        "zero_demand_rows": 60505,
+        "first_interval": "2024-03-01T00:00:00-05:00",
+        "last_interval": "2024-03-31T23:45:00-04:00",
+        "sha256": "58ee0e039d3e776960871ebca54be3a3bf3c3b7917de2e2d6a64e49db12af0e1"
+      }
+    },
+    {
+      "period": "2024-04",
+      "actions": {
+        "download": "created",
+        "validation": "created",
+        "aggregation": "created",
+        "interim_cleaned": false
+      },
+      "paths": {
+        "raw": "data/raw/hvfhv/fhvhv_tripdata_2024-04.parquet",
+        "validated": "data/interim/multimonth/hvfhv_2024-04_validated.parquet",
+        "demand": "data/processed/full/monthly/zone_demand_15m_2024-04.parquet",
+        "validation_config": "artifacts/generated_configs/multimonth/2024-04-validation.yaml",
+        "aggregation_config": "artifacts/generated_configs/multimonth/2024-04-demand-aggregation.yaml",
+        "validation_report": "reports/data_quality/2024-04-full-validation-summary.json",
+        "aggregation_report": "reports/data_quality/2024-04-full-demand-aggregation.json"
+      },
+      "artifacts": {
+        "raw_exists": true,
+        "raw_size_bytes": 476115643,
+        "validated_exists": true,
+        "validated_size_bytes": 606367193,
+        "validation_report_exists": true,
+        "aggregation_report_exists": true
+      },
+      "demand": {
+        "path": "data/processed/full/monthly/zone_demand_15m_2024-04.parquet",
+        "size_bytes": 816617,
+        "row_count": 754560,
+        "interval_count": 2880,
+        "zone_count": 262,
+        "total_pickups": 19732267,
+        "zero_demand_rows": 58184,
+        "first_interval": "2024-04-01T00:00:00-04:00",
+        "last_interval": "2024-04-30T23:45:00-04:00",
+        "sha256": "212bdc9804b366a3985623ebf33eeb35ac7349f423ee2b0fb8d9e96fb263a2ab"
+      }
+    },
+    {
+      "period": "2024-05",
+      "actions": {
+        "download": "created",
+        "validation": "created",
+        "aggregation": "created",
+        "interim_cleaned": false
+      },
+      "paths": {
+        "raw": "data/raw/hvfhv/fhvhv_tripdata_2024-05.parquet",
+        "validated": "data/interim/multimonth/hvfhv_2024-05_validated.parquet",
+        "demand": "data/processed/full/monthly/zone_demand_15m_2024-05.parquet",
+        "validation_config": "artifacts/generated_configs/multimonth/2024-05-validation.yaml",
+        "aggregation_config": "artifacts/generated_configs/multimonth/2024-05-demand-aggregation.yaml",
+        "validation_report": "reports/data_quality/2024-05-full-validation-summary.json",
+        "aggregation_report": "reports/data_quality/2024-05-full-demand-aggregation.json"
+      },
+      "artifacts": {
+        "raw_exists": true,
+        "raw_size_bytes": 498575918,
+        "validated_exists": true,
+        "validated_size_bytes": 639280708,
+        "validation_report_exists": true,
+        "aggregation_report_exists": true
+      },
+      "demand": {
+        "path": "data/processed/full/monthly/zone_demand_15m_2024-05.parquet",
+        "size_bytes": 846638,
+        "row_count": 779712,
+        "interval_count": 2976,
+        "zone_count": 262,
+        "total_pickups": 20703695,
+        "zero_demand_rows": 58005,
+        "first_interval": "2024-05-01T00:00:00-04:00",
+        "last_interval": "2024-05-31T23:45:00-04:00",
+        "sha256": "3f0c050dea7ecb541bc08cc655487a4b40d3d9ad6ce544d619a28b5ae8e2a885"
+      }
+    },
+    {
+      "period": "2024-06",
+      "actions": {
+        "download": "created",
+        "validation": "created",
+        "aggregation": "created",
+        "interim_cleaned": false
+      },
+      "paths": {
+        "raw": "data/raw/hvfhv/fhvhv_tripdata_2024-06.parquet",
+        "validated": "data/interim/multimonth/hvfhv_2024-06_validated.parquet",
+        "demand": "data/processed/full/monthly/zone_demand_15m_2024-06.parquet",
+        "validation_config": "artifacts/generated_configs/multimonth/2024-06-validation.yaml",
+        "aggregation_config": "artifacts/generated_configs/multimonth/2024-06-demand-aggregation.yaml",
+        "validation_report": "reports/data_quality/2024-06-full-validation-summary.json",
+        "aggregation_report": "reports/data_quality/2024-06-full-demand-aggregation.json"
+      },
+      "artifacts": {
+        "raw_exists": true,
+        "raw_size_bytes": 484417715,
+        "validated_exists": true,
+        "validated_size_bytes": 621767213,
+        "validation_report_exists": true,
+        "aggregation_report_exists": true
+      },
+      "demand": {
+        "path": "data/processed/full/monthly/zone_demand_15m_2024-06.parquet",
+        "size_bytes": 820945,
+        "row_count": 754560,
+        "interval_count": 2880,
+        "zone_count": 262,
+        "total_pickups": 20122364,
+        "zero_demand_rows": 52538,
+        "first_interval": "2024-06-01T00:00:00-04:00",
+        "last_interval": "2024-06-30T23:45:00-04:00",
+        "sha256": "d712710e5b246bab51265a8ae3ed3ed2034ab9b6d44c9658204b3540dfb06099"
+      }
+    }
+  ],
+  "combined_output": {
+    "path": "data/processed/full/zone_demand_15m_2024-01_2024-06.parquet",
+    "size_bytes": 4926427,
+    "sha256": "a22e43c57aa4fb1d5faddbcf0b448cbde9bcd483aae3e2f6f50cb34fc8183ca1",
+    "row_count": 4576616,
+    "interval_count": 17468,
+    "zone_count": 262,
+    "total_pickups": 120859803,
+    "zero_demand_rows": 352710,
+    "first_interval": "2024-01-01T00:00:00-05:00",
+    "last_interval": "2024-06-30T23:45:00-04:00",
+    "minimum_time_step": 0,
+    "maximum_time_step": 17467
+  },
+  "invariants": {
+    "monthly_schemas_match": true,
+    "monthly_zone_sets_match": true,
+    "monthly_boundaries_match": true,
+    "months_are_contiguous": true,
+    "combined_row_count_conserved": true,
+    "combined_pickup_count_conserved": true,
+    "combined_zero_rows_conserved": true,
+    "combined_time_step_contiguous": true,
+    "duplicate_key_count": 0,
+    "null_value_count": 0,
+    "minimum_pickup_count": 0
+  }
+}

@@ -407,8 +407,11 @@ def build_validated_lazy_frame(
             pl.col(column)
             .dt.replace_time_zone(
                 settings.timezone,
-                ambiguous="raise",
-                non_existent="raise",
+                # DST edge cases must not abort an entire monthly job.
+                # Invalid local timestamps become null and are then handled
+                # by the normal required-value rejection logic below.
+                ambiguous="null",
+                non_existent="null",
             )
             .alias(column)
             for column in timestamp_columns
