@@ -18,6 +18,10 @@ from urbanflow.data.reference import (
     download_taxi_zone_lookup,
     inspect_taxi_zone_lookup,
 )
+from urbanflow.data.validation import (
+    ValidationError,
+    validate_trip_data,
+)
 
 
 app = typer.Typer(
@@ -222,6 +226,64 @@ def audit_data(
     )
     console.print(
         f"Report: {output_path}"
+    )
+
+
+@app.command("validate-data")
+def validate_data(
+    config_path: Annotated[
+        Path,
+        typer.Option(
+            "--config",
+            help="Path to the validation YAML configuration.",
+        ),
+    ] = Path(
+        "configs/data/validation.yaml"
+    ),
+) -> None:
+    """Validate TLC trip records and write an interim dataset."""
+    console.print(
+        "Running validation with "
+        f"[bold]{config_path}[/bold]..."
+    )
+
+    try:
+        report = validate_trip_data(
+            config_path=config_path
+        )
+    except ValidationError as error:
+        console.print(
+            f"[bold red]Validation failed:[/bold red] {error}"
+        )
+        raise typer.Exit(code=1) from error
+
+    status_counts = report["status_counts"]
+    eligibility_counts = report[
+        "eligibility_counts"
+    ]
+
+    console.print(
+        "[bold green]Validation completed[/bold green]"
+    )
+    console.print(
+        f"Total: {status_counts['total']:,}"
+    )
+    console.print(
+        f"Accepted: {status_counts['accepted']:,}"
+    )
+    console.print(
+        "Retained with flag: "
+        f"{status_counts['retained_with_flag']:,}"
+    )
+    console.print(
+        f"Rejected: {status_counts['rejected']:,}"
+    )
+    console.print(
+        "Demand-forecast eligible: "
+        f"{eligibility_counts['eligible_for_demand_forecasting']:,}"
+    )
+    console.print(
+        f"Output: {report['output']['path']}"
     )
 
 
