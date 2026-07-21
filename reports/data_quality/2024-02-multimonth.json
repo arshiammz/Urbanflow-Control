@@ -1,0 +1,115 @@
+{
+  "multimonth_pipeline_version": "0.1.0",
+  "generated_at": "2026-07-21T14:16:45.474869+00:00",
+  "effective_config": {
+    "dataset": {
+      "dataset": "hvfhv",
+      "year": 2024,
+      "start_month": 2,
+      "end_month": 2,
+      "timezone": "America/New_York"
+    },
+    "templates": {
+      "validation": "configs/data/validation.yaml",
+      "demand_aggregation": "configs/data/demand_aggregation.yaml",
+      "aggregation_interval": "15m"
+    },
+    "paths": {
+      "raw_directory": "data/raw/hvfhv",
+      "zone_lookup": "data/reference/taxi_zone_lookup.csv",
+      "interim_directory": "data/interim/multimonth",
+      "monthly_demand_directory": "data/processed/full/monthly",
+      "generated_config_directory": "artifacts/generated_configs/multimonth",
+      "combined_output": "data/processed/full/smoke/zone_demand_15m_2024-02.parquet",
+      "report": "reports/data_quality/2024-02-multimonth.json"
+    },
+    "execution": {
+      "download_missing": true,
+      "validate_missing": true,
+      "aggregate_missing": true,
+      "force_download": false,
+      "force_validation": false,
+      "force_aggregation": false,
+      "force_combine": false,
+      "cleanup_interim_after_aggregation": false
+    },
+    "output": {
+      "compression": "zstd"
+    }
+  },
+  "execution": {
+    "month_count": 1,
+    "combined_action": "created"
+  },
+  "frequency": {
+    "configured_interval": "15m",
+    "derived_interval_seconds": 900
+  },
+  "months": [
+    {
+      "period": "2024-02",
+      "actions": {
+        "download": "created",
+        "validation": "created",
+        "aggregation": "created",
+        "interim_cleaned": false
+      },
+      "paths": {
+        "raw": "data/raw/hvfhv/fhvhv_tripdata_2024-02.parquet",
+        "validated": "data/interim/multimonth/hvfhv_2024-02_validated.parquet",
+        "demand": "data/processed/full/monthly/zone_demand_15m_2024-02.parquet",
+        "validation_config": "artifacts/generated_configs/multimonth/2024-02-validation.yaml",
+        "aggregation_config": "artifacts/generated_configs/multimonth/2024-02-demand-aggregation.yaml",
+        "validation_report": "reports/data_quality/2024-02-full-validation-summary.json",
+        "aggregation_report": "reports/data_quality/2024-02-full-demand-aggregation.json"
+      },
+      "artifacts": {
+        "raw_exists": true,
+        "raw_size_bytes": 462475428,
+        "validated_exists": true,
+        "validated_size_bytes": 589030317,
+        "validation_report_exists": true,
+        "aggregation_report_exists": true
+      },
+      "demand": {
+        "path": "data/processed/full/monthly/zone_demand_15m_2024-02.parquet",
+        "size_bytes": 784141,
+        "row_count": 729408,
+        "interval_count": 2784,
+        "zone_count": 262,
+        "total_pickups": 19358407,
+        "zero_demand_rows": 58674,
+        "first_interval": "2024-02-01T00:00:00-05:00",
+        "last_interval": "2024-02-29T23:45:00-05:00",
+        "sha256": "2c140a4511d4d770387475820d9680687ff2043b27fb05a1c17e68b7040b3fed"
+      }
+    }
+  ],
+  "combined_output": {
+    "path": "data/processed/full/smoke/zone_demand_15m_2024-02.parquet",
+    "size_bytes": 784141,
+    "sha256": "2c140a4511d4d770387475820d9680687ff2043b27fb05a1c17e68b7040b3fed",
+    "row_count": 729408,
+    "interval_count": 2784,
+    "zone_count": 262,
+    "total_pickups": 19358407,
+    "zero_demand_rows": 58674,
+    "first_interval": "2024-02-01T00:00:00-05:00",
+    "last_interval": "2024-02-29T23:45:00-05:00",
+    "minimum_time_step": 0,
+    "maximum_time_step": 2783
+  },
+  "invariants": {
+    "monthly_schemas_match": true,
+    "monthly_zone_sets_match": true,
+    "monthly_boundaries_match": true,
+    "months_are_contiguous": true,
+    "combined_row_count_conserved": true,
+    "combined_pickup_count_conserved": true,
+    "combined_zero_rows_conserved": true,
+    "combined_time_step_contiguous": true,
+    "duplicate_key_count": 0,
+    "null_value_count": 0,
+    "minimum_pickup_count": 0
+  }
+}

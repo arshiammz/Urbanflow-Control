@@ -1,0 +1,37 @@
+dataset:
+  dataset: hvfhv
+  year: 2024
+  start_month: 2
+  end_month: 2
+  timezone: America/New_York
+
+templates:
+  validation: configs/data/validation.yaml
+  demand_aggregation: configs/data/demand_aggregation.yaml
+
+paths:
+  raw_directory: data/raw/hvfhv
+  zone_lookup: data/reference/taxi_zone_lookup.csv
+
+  interim_directory: data/interim/multimonth
+  monthly_demand_directory: data/processed/full/monthly
+
+  generated_config_directory: artifacts/generated_configs/multimonth
+
+  combined_output: data/processed/full/smoke/zone_demand_15m_2024-02.parquet
+  report: reports/data_quality/2024-02-multimonth.json
+
+execution:
+  download_missing: true
+  validate_missing: true
+  aggregate_missing: true
+
+  force_download: false
+  force_validation: false
+  force_aggregation: false
+  force_combine: false
+
+  cleanup_interim_after_aggregation: false
+
+output:
+  compression: zstd
