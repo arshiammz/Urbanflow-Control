@@ -1,0 +1,25 @@
+dataset:
+  name: hvfhv_forecasting_baselines
+  timezone: America/New_York
+
+paths:
+  input: data/processed/dev/forecast_features_15m_2024-01.parquet
+  predictions: data/processed/dev/baseline_predictions_15m_2024-01.parquet
+  report: reports/forecasting/2024-01-baseline-metrics.json
+
+evaluation:
+  target_column: target_pickup_count
+  split_column: split
+  zone_column: zone_id
+  lag_1_column: pickup_count_lag_1
+  seasonal_lag_column: pickup_count_lag_96
+
+  validation_fit_splits:
+    - train
+
+  test_fit_splits:
+    - train
+    - validation
+
+output:
+  compression: zstd

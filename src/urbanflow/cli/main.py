@@ -26,6 +26,10 @@ from urbanflow.data.validation import (
     ValidationError,
     validate_trip_data,
 )
+from urbanflow.forecasting.baselines import (
+    BaselineEvaluationError,
+    evaluate_forecasting_baselines,
+)
 from urbanflow.forecasting.features import (
     ForecastFeatureError,
     build_forecast_features,
@@ -430,6 +434,76 @@ def build_features(
     )
     console.print(
         f"Output: {output['path']}"
+    )
+
+
+@app.command("evaluate-baselines")
+def evaluate_baselines(
+    config_path: Annotated[
+        Path,
+        typer.Option(
+            "--config",
+            help="Path to the forecasting baseline YAML configuration.",
+        ),
+    ] = Path(
+        "configs/forecasting/baselines.yaml"
+    ),
+) -> None:
+    """Evaluate forecasting baseline models."""
+    console.print(
+        "Evaluating forecasting baselines with "
+        f"[bold]{config_path}[/bold]..."
+    )
+
+    try:
+        report = evaluate_forecasting_baselines(
+            config_path=config_path
+        )
+    except BaselineEvaluationError as error:
+        console.print(
+            "[bold red]"
+            f"Baseline evaluation failed: {error}"
+            "[/bold red]"
+        )
+        raise typer.Exit(code=1) from error
+
+    validation_best = report[
+        "best_baseline_by_mae"
+    ]["validation"]
+
+    test_best = report[
+        "best_baseline_by_mae"
+    ]["test"]
+
+    validation_metrics = report[
+        "metrics"
+    ]["validation"][validation_best]
+
+    test_metrics = report[
+        "metrics"
+    ]["test"][test_best]
+
+    console.print(
+        "[bold green]"
+        "Baseline evaluation completed"
+        "[/bold green]"
+    )
+    console.print(
+        f"Validation best: {validation_best}"
+    )
+    console.print(
+        "Validation MAE: "
+        f"{validation_metrics['mae']:,.4f}"
+    )
+    console.print(
+        f"Test best: {test_best}"
+    )
+    console.print(
+        f"Test MAE: {test_metrics['mae']:,.4f}"
+    )
+    console.print(
+        "Predictions: "
+        f"{report['predictions']['path']}"
     )
 
 
