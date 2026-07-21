@@ -1,0 +1,36 @@
+dataset:
+  name: hvfhv_forecast_features
+  expected_year: 2024
+  expected_month: 1
+  timezone: America/New_York
+
+paths:
+  input: data/processed/dev/zone_demand_15m_2024-01.parquet
+  output: data/processed/dev/forecast_features_15m_2024-01.parquet
+  report: reports/data_quality/2024-01-forecast-features.json
+
+features:
+  target_column: pickup_count
+
+  lags:
+    - 1
+    - 2
+    - 4
+    - 8
+    - 96
+    - 192
+    - 672
+
+  rolling_windows:
+    - 4
+    - 8
+    - 96
+    - 672
+
+splits:
+  train_end: "2024-01-22"
+  validation_end: "2024-01-27"
+  test_end: "2024-02-01"
+
+output:
+  compression: zstd

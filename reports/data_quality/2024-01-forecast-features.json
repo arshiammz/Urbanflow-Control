@@ -1,0 +1,133 @@
+{
+  "feature_pipeline_version": "0.1.0",
+  "generated_at": "2026-07-21T12:53:30.900059+00:00",
+  "effective_config": {
+    "dataset": {
+      "expected_year": 2024,
+      "expected_month": 1,
+      "timezone": "America/New_York"
+    },
+    "paths": {
+      "input": "data/processed/dev/zone_demand_15m_2024-01.parquet",
+      "output": "data/processed/dev/forecast_features_15m_2024-01.parquet",
+      "report": "reports/data_quality/2024-01-forecast-features.json"
+    },
+    "features": {
+      "target_column": "pickup_count",
+      "lags": [
+        1,
+        2,
+        4,
+        8,
+        96,
+        192,
+        672
+      ],
+      "rolling_windows": [
+        4,
+        8,
+        96,
+        672
+      ],
+      "maximum_history_steps": 672
+    },
+    "splits": {
+      "train_end": "2024-01-22",
+      "validation_end": "2024-01-27",
+      "test_end": "2024-02-01"
+    },
+    "output": {
+      "compression": "zstd"
+    }
+  },
+  "input": {
+    "path": "data/processed/dev/zone_demand_15m_2024-01.parquet",
+    "size_bytes": 837678,
+    "row_count": 779712,
+    "interval_count": 2976,
+    "zone_count": 262,
+    "duplicate_key_count": 0,
+    "required_null_count": 0
+  },
+  "output": {
+    "path": "data/processed/dev/forecast_features_15m_2024-01.parquet",
+    "size_bytes": 15958519,
+    "expected_row_count": 603648,
+    "row_count": 603648,
+    "interval_count": 2304,
+    "zone_count": 262,
+    "first_interval": "2024-01-08T00:00:00-05:00",
+    "last_interval": "2024-01-31T23:45:00-05:00"
+  },
+  "splits": {
+    "train_rows": 352128,
+    "validation_rows": 125760,
+    "test_rows": 125760
+  },
+  "target_distribution": {
+    "sum": 15567255,
+    "minimum": 0,
+    "maximum": 458,
+    "mean": 25.78863,
+    "p50": 16.0,
+    "p95": 82.0,
+    "p99": 145.0
+  },
+  "feature_schema": {
+    "target_column": "target_pickup_count",
+    "feature_count": 27,
+    "feature_columns": [
+      "zone_id",
+      "borough",
+      "service_zone",
+      "day_of_week",
+      "hour",
+      "minute",
+      "minute_of_day",
+      "is_weekend",
+      "time_of_day_sin",
+      "time_of_day_cos",
+      "day_of_week_sin",
+      "day_of_week_cos",
+      "pickup_count_lag_1",
+      "pickup_count_lag_2",
+      "pickup_count_lag_4",
+      "pickup_count_lag_8",
+      "pickup_count_lag_96",
+      "pickup_count_lag_192",
+      "pickup_count_lag_672",
+      "pickup_count_rolling_mean_4",
+      "pickup_count_rolling_std_4",
+      "pickup_count_rolling_mean_8",
+      "pickup_count_rolling_std_8",
+      "pickup_count_rolling_mean_96",
+      "pickup_count_rolling_std_96",
+      "pickup_count_rolling_mean_672",
+      "pickup_count_rolling_std_672"
+    ],
+    "history_feature_columns": [
+      "pickup_count_lag_1",
+      "pickup_count_lag_2",
+      "pickup_count_lag_4",
+      "pickup_count_lag_8",
+      "pickup_count_lag_96",
+      "pickup_count_lag_192",
+      "pickup_count_lag_672",
+      "pickup_count_rolling_mean_4",
+      "pickup_count_rolling_std_4",
+      "pickup_count_rolling_mean_8",
+      "pickup_count_rolling_std_8",
+      "pickup_count_rolling_mean_96",
+      "pickup_count_rolling_std_96",
+      "pickup_count_rolling_mean_672",
+      "pickup_count_rolling_std_672"
+    ]
+  },
+  "invariants": {
+    "history_uses_past_only": true,
+    "row_count_matches_expected": true,
+    "duplicate_key_count": 0,
+    "null_value_count": 0,
+    "minimum_target": 0
+  }
+}

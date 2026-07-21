@@ -35,6 +35,7 @@ mlruns/
 !reports/data_quality/*-raw-audit.json
 !reports/data_quality/*-validation-summary.json
 !reports/data_quality/*-demand-aggregation.json
+!reports/data_quality/*-forecast-features.json
 
 # OS and editors
 .DS_Store

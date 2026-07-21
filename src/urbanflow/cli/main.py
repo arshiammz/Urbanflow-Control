@@ -26,6 +26,10 @@ from urbanflow.data.validation import (
     ValidationError,
     validate_trip_data,
 )
+from urbanflow.forecasting.features import (
+    ForecastFeatureError,
+    build_forecast_features,
+)
 
 
 app = typer.Typer(
@@ -93,13 +97,20 @@ def download_data(
         )
         raise typer.Exit(code=1) from error
 
-    size_mb = destination.stat().st_size / (1024 * 1024)
+    size_mb = (
+        destination.stat().st_size
+        / (1024 * 1024)
+    )
 
     console.print(
         "[bold green]Download completed[/bold green]"
     )
-    console.print(f"File: {destination}")
-    console.print(f"Size: {size_mb:,.2f} MB")
+    console.print(
+        f"File: {destination}"
+    )
+    console.print(
+        f"Size: {size_mb:,.2f} MB"
+    )
 
 
 @app.command("download-zone-lookup")
@@ -144,7 +155,9 @@ def download_zone_lookup(
         "Taxi-zone lookup is ready"
         "[/bold green]"
     )
-    console.print(f"File: {destination}")
+    console.print(
+        f"File: {destination}"
+    )
     console.print(
         f"Rows: {summary['row_count']:,}"
     )
@@ -261,7 +274,9 @@ def validate_data(
         )
         raise typer.Exit(code=1) from error
 
-    status_counts = report["status_counts"]
+    status_counts = report[
+        "status_counts"
+    ]
     eligibility_counts = report[
         "eligibility_counts"
     ]
@@ -343,6 +358,75 @@ def build_demand(
     )
     console.print(
         f"Zero-demand rows: {panel['zero_demand_rows']:,}"
+    )
+    console.print(
+        f"Output: {output['path']}"
+    )
+
+
+@app.command("build-features")
+def build_features(
+    config_path: Annotated[
+        Path,
+        typer.Option(
+            "--config",
+            help="Path to the forecasting feature YAML configuration.",
+        ),
+    ] = Path(
+        "configs/forecasting/features.yaml"
+    ),
+) -> None:
+    """Build leakage-safe forecasting features."""
+    console.print(
+        "Building forecasting features with "
+        f"[bold]{config_path}[/bold]..."
+    )
+
+    try:
+        report = build_forecast_features(
+            config_path=config_path
+        )
+    except ForecastFeatureError as error:
+        console.print(
+            "[bold red]"
+            f"Feature generation failed: {error}"
+            "[/bold red]"
+        )
+        raise typer.Exit(code=1) from error
+
+    output = report["output"]
+    splits = report["splits"]
+    feature_schema = report[
+        "feature_schema"
+    ]
+
+    console.print(
+        "[bold green]"
+        "Forecasting features completed"
+        "[/bold green]"
+    )
+    console.print(
+        f"Rows: {output['row_count']:,}"
+    )
+    console.print(
+        f"Intervals: {output['interval_count']:,}"
+    )
+    console.print(
+        f"Zones: {output['zone_count']:,}"
+    )
+    console.print(
+        f"Train rows: {splits['train_rows']:,}"
+    )
+    console.print(
+        "Validation rows: "
+        f"{splits['validation_rows']:,}"
+    )
+    console.print(
+        f"Test rows: {splits['test_rows']:,}"
+    )
+    console.print(
+        "Model features: "
+        f"{feature_schema['feature_count']:,}"
     )
     console.print(
         f"Output: {output['path']}"
