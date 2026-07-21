@@ -470,6 +470,7 @@ def build_observed_demand(
             .dt.truncate(
                 settings.interval
             )
+            .dt.cast_time_unit("ns")
             .alias("interval_start"),
             pl.col("PULocationID")
             .cast(pl.Int32)
