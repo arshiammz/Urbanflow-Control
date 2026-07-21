@@ -30,9 +30,10 @@ mlruns/
 !data/interim/.gitkeep
 !data/processed/.gitkeep
 
-# Keep small reproducible audit reports
+# Keep small reproducible data-quality reports
 !reports/data_quality/
 !reports/data_quality/*-raw-audit.json
+!reports/data_quality/*-validation-summary.json
 
 # OS and editors
 .DS_Store

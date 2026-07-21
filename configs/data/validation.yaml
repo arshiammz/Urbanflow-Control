@@ -1,0 +1,35 @@
+dataset:
+  name: hvfhv
+  expected_year: 2024
+  expected_month: 1
+  timezone: America/New_York
+
+paths:
+  input: data/raw/hvfhv/fhvhv_tripdata_2024-01.parquet
+  zone_lookup: data/reference/taxi_zone_lookup.csv
+  output: data/interim/hvfhv_2024-01_validated.parquet
+  report: reports/data_quality/2024-01-validation-summary.json
+
+validation:
+  required_columns:
+    - hvfhs_license_num
+    - request_datetime
+    - pickup_datetime
+    - dropoff_datetime
+    - PULocationID
+    - DOLocationID
+    - trip_miles
+    - trip_time
+
+  core_boroughs:
+    - Bronx
+    - Brooklyn
+    - Manhattan
+    - Queens
+    - Staten Island
+
+  long_trip_duration_seconds: 14400
+
+output:
+  compression: zstd
+  include_rejected_records: true
