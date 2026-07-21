@@ -14,6 +14,10 @@ from urbanflow.data.download import (
     DownloadError,
     download_trip_data,
 )
+from urbanflow.data.reference import (
+    download_taxi_zone_lookup,
+    inspect_taxi_zone_lookup,
+)
 
 
 app = typer.Typer(
@@ -88,6 +92,67 @@ def download_data(
     )
     console.print(f"File: {destination}")
     console.print(f"Size: {size_mb:,.2f} MB")
+
+
+@app.command("download-zone-lookup")
+def download_zone_lookup(
+    output_path: Annotated[
+        Path,
+        typer.Option(
+            "--output",
+            help="Path for the taxi-zone lookup CSV.",
+        ),
+    ] = Path(
+        "data/reference/taxi_zone_lookup.csv"
+    ),
+    force: Annotated[
+        bool,
+        typer.Option(
+            help="Replace an existing lookup file.",
+        ),
+    ] = False,
+) -> None:
+    """Download and validate the official TLC taxi-zone lookup."""
+    try:
+        destination = download_taxi_zone_lookup(
+            output_path=output_path,
+            force=force,
+        )
+
+        summary = inspect_taxi_zone_lookup(
+            destination
+        )
+
+    except DownloadError as error:
+        console.print(
+            "[bold red]"
+            f"Zone lookup download failed: {error}"
+            "[/bold red]"
+        )
+        raise typer.Exit(code=1) from error
+
+    console.print(
+        "[bold green]"
+        "Taxi-zone lookup is ready"
+        "[/bold green]"
+    )
+    console.print(f"File: {destination}")
+    console.print(
+        f"Rows: {summary['row_count']:,}"
+    )
+    console.print(
+        "LocationID range: "
+        f"{summary['minimum_location_id']}–"
+        f"{summary['maximum_location_id']}"
+    )
+    console.print(
+        "Unique LocationIDs: "
+        f"{summary['unique_location_ids']:,}"
+    )
+    console.print(
+        "Duplicate LocationIDs: "
+        f"{summary['duplicate_location_ids']:,}"
+    )
 
 
 @app.command("audit-data")

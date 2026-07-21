@@ -1,0 +1,10 @@
+{
+  "dataset": "NYC TLC Taxi Zone Lookup",
+  "source": "NYC Taxi and Limousine Commission",
+  "source_url": "https://d37ci6vzurychx.cloudfront.net/misc/taxi_zone_lookup.csv",
+  "downloaded_at": "2026-07-21T08:03:57.541718+00:00",
+  "filename": "taxi_zone_lookup.csv",
+  "size_bytes": 12331,
+  "sha256": "1a99e105092230f8620f301edcca7f80d3080642ff404d28ed957d3fa222c8ed",
+  "content_type": "text/csv"
+}
