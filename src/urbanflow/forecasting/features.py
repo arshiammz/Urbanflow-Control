@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import UTC, date, datetime, time
+from datetime import UTC, date, datetime, time, timedelta
 from math import pi
 from pathlib import Path
 from typing import Any
@@ -305,7 +305,7 @@ class ForecastFeatureSettings:
                 "Rolling-window values must be unique."
             )
 
-        month_start, next_month_start = (
+        dataset_start, _ = (
             get_month_date_bounds(
                 year=self.expected_year,
                 month=self.expected_month,
@@ -313,21 +313,21 @@ class ForecastFeatureSettings:
         )
 
         if not (
-            month_start
+            dataset_start
             < self.train_end
             < self.validation_end
             < self.test_end
         ):
             raise ForecastFeatureError(
                 "Split boundaries must satisfy: "
-                "month_start < train_end < "
+                "dataset_start < train_end < "
                 "validation_end < test_end."
             )
 
-        if self.test_end != next_month_start:
+        if self.test_end.day != 1:
             raise ForecastFeatureError(
-                "test_end must equal the first day "
-                "of the following month."
+                "test_end must be the first day after "
+                "the final complete dataset month."
             )
 
         if not self.compression:
@@ -373,6 +373,14 @@ class ForecastFeatureSettings:
             "dataset": {
                 "expected_year": self.expected_year,
                 "expected_month": self.expected_month,
+                "dataset_start": (
+                    date(
+                        self.expected_year,
+                        self.expected_month,
+                        1,
+                    ).isoformat()
+                ),
+                "dataset_end": self.test_end.isoformat(),
                 "timezone": self.timezone,
             },
             "paths": {
@@ -509,6 +517,21 @@ def validate_input_panel(
             .alias(
                 "minimum_pickup_count"
             ),
+            pl.col("time_step")
+            .n_unique()
+            .alias(
+                "time_step_count"
+            ),
+            pl.col("time_step")
+            .min()
+            .alias(
+                "minimum_time_step"
+            ),
+            pl.col("time_step")
+            .max()
+            .alias(
+                "maximum_time_step"
+            ),
             pl.col("interval_start")
             .min()
             .alias(
@@ -585,6 +608,18 @@ def validate_input_panel(
         summary["minimum_pickup_count"]
     )
 
+    time_step_count = int(
+        summary["time_step_count"]
+    )
+
+    minimum_time_step = int(
+        summary["minimum_time_step"]
+    )
+
+    maximum_time_step = int(
+        summary["maximum_time_step"]
+    )
+
     if duplicate_key_count:
         raise ForecastFeatureError(
             "Demand panel contains duplicate "
@@ -616,6 +651,22 @@ def validate_input_panel(
             "intervals for the configured history."
         )
 
+    if time_step_count != interval_count:
+        raise ForecastFeatureError(
+            "Demand panel time_step values do not match "
+            "the interval count."
+        )
+
+    if minimum_time_step != 0:
+        raise ForecastFeatureError(
+            "Demand panel time_step must start at zero."
+        )
+
+    if maximum_time_step != interval_count - 1:
+        raise ForecastFeatureError(
+            "Demand panel time_step values are not contiguous."
+        )
+
     first_interval = summary[
         "first_interval"
     ]
@@ -624,24 +675,91 @@ def validate_input_panel(
         "last_interval"
     ]
 
-    if (
-        first_interval.year
-        != settings.expected_year
-        or first_interval.month
-        != settings.expected_month
-    ):
+    timezone_info = ZoneInfo(
+        settings.timezone
+    )
+
+    dataset_start = datetime(
+        year=settings.expected_year,
+        month=settings.expected_month,
+        day=1,
+        tzinfo=timezone_info,
+    )
+
+    dataset_end = datetime.combine(
+        settings.test_end,
+        time.min,
+        tzinfo=timezone_info,
+    )
+
+    if first_interval != dataset_start:
         raise ForecastFeatureError(
-            "Demand panel begins outside the expected month."
+            "Demand panel does not begin at the configured "
+            f"dataset start: expected {dataset_start!s}, "
+            f"received {first_interval!s}."
         )
 
-    if (
-        last_interval.year
-        != settings.expected_year
-        or last_interval.month
-        != settings.expected_month
-    ):
+    first_two_intervals = (
+        source.select(
+            pl.col("interval_start")
+        )
+        .unique()
+        .sort("interval_start")
+        .limit(2)
+        .collect()
+        .get_column("interval_start")
+        .to_list()
+    )
+
+    if len(first_two_intervals) != 2:
         raise ForecastFeatureError(
-            "Demand panel ends outside the expected month."
+            "Demand panel does not contain enough intervals "
+            "to derive its frequency."
+        )
+
+    interval_seconds = int(
+        (
+            first_two_intervals[1].astimezone(UTC)
+            - first_two_intervals[0].astimezone(UTC)
+        ).total_seconds()
+    )
+
+    if interval_seconds <= 0:
+        raise ForecastFeatureError(
+            "Demand panel interval duration must be positive."
+        )
+
+    expected_interval_count = int(
+        (
+            dataset_end.astimezone(UTC)
+            - dataset_start.astimezone(UTC)
+        ).total_seconds()
+        // interval_seconds
+    )
+
+    expected_last_interval = (
+        dataset_end.astimezone(UTC)
+        - timedelta(
+            seconds=interval_seconds
+        )
+    ).astimezone(
+        timezone_info
+    )
+
+    if interval_count != expected_interval_count:
+        raise ForecastFeatureError(
+            "Demand panel interval count does not cover the "
+            "configured dataset range: "
+            f"expected {expected_interval_count:,}, "
+            f"received {interval_count:,}."
+        )
+
+    if last_interval != expected_last_interval:
+        raise ForecastFeatureError(
+            "Demand panel does not end at the configured "
+            f"dataset boundary: expected "
+            f"{expected_last_interval!s}, received "
+            f"{last_interval!s}."
         )
 
     return {
@@ -654,6 +772,9 @@ def validate_input_panel(
         "required_null_count": (
             required_null_count
         ),
+        "interval_seconds": interval_seconds,
+        "minimum_time_step": minimum_time_step,
+        "maximum_time_step": maximum_time_step,
     }
 
 

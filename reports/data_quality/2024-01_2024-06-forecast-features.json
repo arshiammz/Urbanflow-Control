@@ -1,0 +1,138 @@
+{
+  "feature_pipeline_version": "0.1.0",
+  "generated_at": "2026-07-22T13:58:44.850442+00:00",
+  "effective_config": {
+    "dataset": {
+      "expected_year": 2024,
+      "expected_month": 1,
+      "dataset_start": "2024-01-01",
+      "dataset_end": "2024-07-01",
+      "timezone": "America/New_York"
+    },
+    "paths": {
+      "input": "data/processed/full/zone_demand_15m_2024-01_2024-06.parquet",
+      "output": "data/processed/full/forecast_features_15m_2024-01_2024-06.parquet",
+      "report": "reports/data_quality/2024-01_2024-06-forecast-features.json"
+    },
+    "features": {
+      "target_column": "pickup_count",
+      "lags": [
+        1,
+        2,
+        4,
+        8,
+        96,
+        192,
+        672
+      ],
+      "rolling_windows": [
+        4,
+        8,
+        96,
+        672
+      ],
+      "maximum_history_steps": 672
+    },
+    "splits": {
+      "train_end": "2024-05-01",
+      "validation_end": "2024-06-01",
+      "test_end": "2024-07-01"
+    },
+    "output": {
+      "compression": "zstd"
+    }
+  },
+  "input": {
+    "path": "data/processed/full/zone_demand_15m_2024-01_2024-06.parquet",
+    "size_bytes": 4926427,
+    "row_count": 4576616,
+    "interval_count": 17468,
+    "zone_count": 262,
+    "duplicate_key_count": 0,
+    "required_null_count": 0,
+    "interval_seconds": 900,
+    "minimum_time_step": 0,
+    "maximum_time_step": 17467
+  },
+  "output": {
+    "path": "data/processed/full/forecast_features_15m_2024-01_2024-06.parquet",
+    "size_bytes": 117031117,
+    "expected_row_count": 4400552,
+    "row_count": 4400552,
+    "interval_count": 16796,
+    "zone_count": 262,
+    "first_interval": "2024-01-08T00:00:00-05:00",
+    "last_interval": "2024-06-30T23:45:00-04:00"
+  },
+  "splits": {
+    "train_rows": 2866280,
+    "validation_rows": 779712,
+    "test_rows": 754560
+  },
+  "target_distribution": {
+    "sum": 116763896,
+    "minimum": 0,
+    "maximum": 481,
+    "mean": 26.53392,
+    "p50": 17.0,
+    "p95": 82.0,
+    "p99": 144.0
+  },
+  "feature_schema": {
+    "target_column": "target_pickup_count",
+    "feature_count": 27,
+    "feature_columns": [
+      "zone_id",
+      "borough",
+      "service_zone",
+      "day_of_week",
+      "hour",
+      "minute",
+      "minute_of_day",
+      "is_weekend",
+      "time_of_day_sin",
+      "time_of_day_cos",
+      "day_of_week_sin",
+      "day_of_week_cos",
+      "pickup_count_lag_1",
+      "pickup_count_lag_2",
+      "pickup_count_lag_4",
+      "pickup_count_lag_8",
+      "pickup_count_lag_96",
+      "pickup_count_lag_192",
+      "pickup_count_lag_672",
+      "pickup_count_rolling_mean_4",
+      "pickup_count_rolling_std_4",
+      "pickup_count_rolling_mean_8",
+      "pickup_count_rolling_std_8",
+      "pickup_count_rolling_mean_96",
+      "pickup_count_rolling_std_96",
+      "pickup_count_rolling_mean_672",
+      "pickup_count_rolling_std_672"
+    ],
+    "history_feature_columns": [
+      "pickup_count_lag_1",
+      "pickup_count_lag_2",
+      "pickup_count_lag_4",
+      "pickup_count_lag_8",
+      "pickup_count_lag_96",
+      "pickup_count_lag_192",
+      "pickup_count_lag_672",
+      "pickup_count_rolling_mean_4",
+      "pickup_count_rolling_std_4",
+      "pickup_count_rolling_mean_8",
+      "pickup_count_rolling_std_8",
+      "pickup_count_rolling_mean_96",
+      "pickup_count_rolling_std_96",
+      "pickup_count_rolling_mean_672",
+      "pickup_count_rolling_std_672"
+    ]
+  },
+  "invariants": {
+    "history_uses_past_only": true,
+    "row_count_matches_expected": true,
+    "duplicate_key_count": 0,
+    "null_value_count": 0,
+    "minimum_target": 0
+  }
+}
