@@ -1,0 +1,195 @@
+{
+  "importance_type": "total_gain",
+  "feature_count": 27,
+  "features": [
+    {
+      "feature": "pickup_count_lag_1",
+      "gain": 1641753.625,
+      "total_gain": 19940739072.0,
+      "weight": 12146,
+      "normalized_total_gain": 0.73401175
+    },
+    {
+      "feature": "pickup_count_rolling_mean_4",
+      "gain": 1533460.75,
+      "total_gain": 6021900288.0,
+      "weight": 3927,
+      "normalized_total_gain": 0.22166408
+    },
+    {
+      "feature": "pickup_count_lag_672",
+      "gain": 36803.84375,
+      "total_gain": 393359488.0,
+      "weight": 10688,
+      "normalized_total_gain": 0.01447943
+    },
+    {
+      "feature": "pickup_count_lag_2",
+      "gain": 24076.58984375,
+      "total_gain": 213824192.0,
+      "weight": 8881,
+      "normalized_total_gain": 0.00787079
+    },
+    {
+      "feature": "zone_id",
+      "gain": 5566.359375,
+      "total_gain": 117349984.0,
+      "weight": 21082,
+      "normalized_total_gain": 0.00431961
+    },
+    {
+      "feature": "pickup_count_lag_96",
+      "gain": 10806.1953125,
+      "total_gain": 101718720.0,
+      "weight": 9413,
+      "normalized_total_gain": 0.00374423
+    },
+    {
+      "feature": "time_of_day_sin",
+      "gain": 10978.78417969,
+      "total_gain": 69934856.0,
+      "weight": 6370,
+      "normalized_total_gain": 0.00257428
+    },
+    {
+      "feature": "minute_of_day",
+      "gain": 7962.80371094,
+      "total_gain": 51981184.0,
+      "weight": 6528,
+      "normalized_total_gain": 0.00191341
+    },
+    {
+      "feature": "time_of_day_cos",
+      "gain": 6810.77978516,
+      "total_gain": 32780282.0,
+      "weight": 4813,
+      "normalized_total_gain": 0.00120663
+    },
+    {
+      "feature": "pickup_count_lag_192",
+      "gain": 3761.10522461,
+      "total_gain": 29332860.0,
+      "weight": 7799,
+      "normalized_total_gain": 0.00107973
+    },
+    {
+      "feature": "day_of_week",
+      "gain": 6228.96191406,
+      "total_gain": 27762484.0,
+      "weight": 4457,
+      "normalized_total_gain": 0.00102193
+    },
+    {
+      "feature": "pickup_count_lag_8",
+      "gain": 3512.38867188,
+      "total_gain": 25686098.0,
+      "weight": 7313,
+      "normalized_total_gain": 0.0009455
+    },
+    {
+      "feature": "pickup_count_lag_4",
+      "gain": 3212.59912109,
+      "total_gain": 22960446.0,
+      "weight": 7147,
+      "normalized_total_gain": 0.00084517
+    },
+    {
+      "feature": "hour",
+      "gain": 7454.81054688,
+      "total_gain": 19531604.0,
+      "weight": 2620,
+      "normalized_total_gain": 0.00071895
+    },
+    {
+      "feature": "pickup_count_rolling_mean_96",
+      "gain": 4562.70263672,
+      "total_gain": 14094189.0,
+      "weight": 3089,
+      "normalized_total_gain": 0.0005188
+    },
+    {
+      "feature": "pickup_count_rolling_mean_8",
+      "gain": 3741.21972656,
+      "total_gain": 13273848.0,
+      "weight": 3548,
+      "normalized_total_gain": 0.00048861
+    },
+    {
+      "feature": "pickup_count_rolling_std_4",
+      "gain": 2418.81225586,
+      "total_gain": 10703244.0,
+      "weight": 4425,
+      "normalized_total_gain": 0.00039398
+    },
+    {
+      "feature": "pickup_count_rolling_std_8",
+      "gain": 2724.82446289,
+      "total_gain": 10419729.0,
+      "weight": 3824,
+      "normalized_total_gain": 0.00038355
+    },
+    {
+      "feature": "day_of_week_cos",
+      "gain": 6389.77783203,
+      "total_gain": 8824283.0,
+      "weight": 1381,
+      "normalized_total_gain": 0.00032482
+    },
+    {
+      "feature": "pickup_count_rolling_std_96",
+      "gain": 3683.66625977,
+      "total_gain": 8807646.0,
+      "weight": 2391,
+      "normalized_total_gain": 0.00032421
+    },
+    {
+      "feature": "day_of_week_sin",
+      "gain": 4349.47607422,
+      "total_gain": 8398838.0,
+      "weight": 1931,
+      "normalized_total_gain": 0.00030916
+    },
+    {
+      "feature": "minute",
+      "gain": 3704.01513672,
+      "total_gain": 7893256.0,
+      "weight": 2131,
+      "normalized_total_gain": 0.00029055
+    },
+    {
+      "feature": "pickup_count_rolling_mean_672",
+      "gain": 2899.04663086,
+      "total_gain": 6853346.0,
+      "weight": 2364,
+      "normalized_total_gain": 0.00025227
+    },
+    {
+      "feature": "pickup_count_rolling_std_672",
+      "gain": 3008.79394531,
+      "total_gain": 6125904.5,
+      "weight": 2036,
+      "normalized_total_gain": 0.00022549
+    },
+    {
+      "feature": "service_zone",
+      "gain": 4838.20703125,
+      "total_gain": 1049890.875,
+      "weight": 217,
+      "normalized_total_gain": 3.865e-05
+    },
+    {
+      "feature": "borough",
+      "gain": 2863.58789062,
+      "total_gain": 844758.4375,
+      "weight": 295,
+      "normalized_total_gain": 3.11e-05
+    },
+    {
+      "feature": "is_weekend",
+      "gain": 4768.01269531,
+      "total_gain": 634145.6875,
+      "weight": 133,
+      "normalized_total_gain": 2.334e-05
+    }
+  ]
+}
