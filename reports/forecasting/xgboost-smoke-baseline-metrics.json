@@ -1,0 +1,171 @@
+{
+  "baseline_pipeline_version": "0.1.0",
+  "generated_at": "2026-07-23T18:13:41.058915+00:00",
+  "effective_config": {
+    "dataset": {
+      "timezone": "America/New_York"
+    },
+    "paths": {
+      "input": "data/processed/dev/forecast_features_xgboost_smoke.parquet",
+      "predictions": "data/processed/dev/baseline_predictions_xgboost_smoke.parquet",
+      "report": "reports/forecasting/xgboost-smoke-baseline-metrics.json"
+    },
+    "evaluation": {
+      "target_column": "target_pickup_count",
+      "split_column": "split",
+      "zone_column": "zone_id",
+      "lag_1_column": "pickup_count_lag_1",
+      "seasonal_lag_column": "pickup_count_lag_96",
+      "validation_fit_splits": [
+        "train"
+      ],
+      "test_fit_splits": [
+        "train",
+        "validation"
+      ]
+    },
+    "output": {
+      "compression": "zstd"
+    }
+  },
+  "input": {
+    "path": "data/processed/dev/forecast_features_xgboost_smoke.parquet",
+    "size_bytes": 1998066,
+    "row_count": 75456,
+    "train_rows": 50304,
+    "validation_rows": 12576,
+    "test_rows": 12576,
+    "null_value_count": 0
+  },
+  "predictions": {
+    "path": "data/processed/dev/baseline_predictions_xgboost_smoke.parquet",
+    "size_bytes": 120396,
+    "row_count": 25152,
+    "validation_rows": 12576,
+    "test_rows": 12576,
+    "first_interval": "2024-05-01T00:00:00-04:00",
+    "last_interval": "2024-06-01T11:45:00-04:00",
+    "duplicate_key_count": 0,
+    "null_value_count": 0,
+    "negative_prediction_count": 0
+  },
+  "metrics": {
+    "validation": {
+      "zero": {
+        "baseline": "zero",
+        "row_count": 12576,
+        "actual_sum": 241298,
+        "prediction_sum": 0.0,
+        "mae": 19.187182,
+        "rmse": 29.746496,
+        "wape": 1.0,
+        "smape": 1.7899173,
+        "mean_bias": -19.187182
+      },
+      "zone_historical_mean": {
+        "baseline": "zone_historical_mean",
+        "row_count": 12576,
+        "actual_sum": 241298,
+        "prediction_sum": 285975.5,
+        "mae": 12.123174,
+        "rmse": 18.04745,
+        "wape": 0.63183711,
+        "smape": 0.77079986,
+        "mean_bias": 3.5526
+      },
+      "lag_1": {
+        "baseline": "lag_1",
+        "row_count": 12576,
+        "actual_sum": 241298,
+        "prediction_sum": 240175.0,
+        "mae": 4.667223,
+        "rmse": 7.591129,
+        "wape": 0.24324694,
+        "smape": 0.42794859,
+        "mean_bias": -0.089297
+      },
+      "seasonal_lag_96": {
+        "baseline": "seasonal_lag_96",
+        "row_count": 12576,
+        "actual_sum": 241298,
+        "prediction_sum": 216012.0,
+        "mae": 4.8882,
+        "rmse": 8.214319,
+        "wape": 0.25476382,
+        "smape": 0.4443458,
+        "mean_bias": -2.010655
+      }
+    },
+    "test": {
+      "zero": {
+        "baseline": "zero",
+        "row_count": 12576,
+        "actual_sum": 285451,
+        "prediction_sum": 0.0,
+        "mae": 22.698076,
+        "rmse": 36.426449,
+        "wape": 1.0,
+        "smape": 1.84510178,
+        "mean_bias": -22.698076
+      },
+      "zone_historical_mean": {
+        "baseline": "zone_historical_mean",
+        "row_count": 12576,
+        "actual_sum": 285451,
+        "prediction_sum": 277040.0,
+        "mae": 11.297912,
+        "rmse": 22.326469,
+        "wape": 0.49774757,
+        "smape": 0.61041626,
+        "mean_bias": -0.668814
+      },
+      "lag_1": {
+        "baseline": "lag_1",
+        "row_count": 12576,
+        "actual_sum": 285451,
+        "prediction_sum": 287738.0,
+        "mae": 4.946008,
+        "rmse": 7.621164,
+        "wape": 0.2179043,
+        "smape": 0.37897558,
+        "mean_bias": 0.181854
+      },
+      "seasonal_lag_96": {
+        "baseline": "seasonal_lag_96",
+        "row_count": 12576,
+        "actual_sum": 285451,
+        "prediction_sum": 258558.0,
+        "mae": 10.446008,
+        "rmse": 19.457743,
+        "wape": 0.46021559,
+        "smape": 0.55697224,
+        "mean_bias": -2.138438
+      }
+    }
+  },
+  "ranking_by_mae": {
+    "validation": [
+      "lag_1",
+      "seasonal_lag_96",
+      "zone_historical_mean",
+      "zero"
+    ],
+    "test": [
+      "lag_1",
+      "seasonal_lag_96",
+      "zone_historical_mean",
+      "zero"
+    ]
+  },
+  "best_baseline_by_mae": {
+    "validation": "lag_1",
+    "test": "lag_1"
+  },
+  "invariants": {
+    "validation_uses_train_only": true,
+    "test_uses_train_and_validation": true,
+    "duplicate_key_count": 0,
+    "null_value_count": 0,
+    "negative_prediction_count": 0
+  }
+}
