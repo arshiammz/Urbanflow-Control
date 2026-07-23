@@ -1,0 +1,111 @@
+dataset:
+  name: hvfhv_global_xgboost
+  timezone: America/New_York
+
+paths:
+  input: data/processed/full/forecast_features_15m_2024-01_2024-06.parquet
+
+  model: artifacts/models/xgboost-demand/model.ubj
+  metadata: artifacts/models/xgboost-demand/metadata.json
+
+  predictions: data/processed/full/xgboost_predictions_15m_2024-01_2024-06.parquet
+
+  report: reports/forecasting/2024-01_2024-06-xgboost-metrics.json
+  feature_importance: reports/forecasting/2024-01_2024-06-xgboost-feature-importance.json
+
+  baseline_report: reports/forecasting/2024-01_2024-06-baseline-metrics.json
+
+schema:
+  target_column: target_pickup_count
+  split_column: split
+
+  key_columns:
+    - interval_start
+    - zone_id
+
+  categorical_columns:
+    - zone_id
+    - borough
+    - service_zone
+
+  feature_columns:
+    - zone_id
+    - borough
+    - service_zone
+
+    - day_of_week
+    - hour
+    - minute
+    - minute_of_day
+    - is_weekend
+
+    - time_of_day_sin
+    - time_of_day_cos
+    - day_of_week_sin
+    - day_of_week_cos
+
+    - pickup_count_lag_1
+    - pickup_count_lag_2
+    - pickup_count_lag_4
+    - pickup_count_lag_8
+    - pickup_count_lag_96
+    - pickup_count_lag_192
+    - pickup_count_lag_672
+
+    - pickup_count_rolling_mean_4
+    - pickup_count_rolling_std_4
+    - pickup_count_rolling_mean_8
+    - pickup_count_rolling_std_8
+    - pickup_count_rolling_mean_96
+    - pickup_count_rolling_std_96
+    - pickup_count_rolling_mean_672
+    - pickup_count_rolling_std_672
+
+splits:
+  training:
+    - train
+
+  validation:
+    - validation
+
+  final_training:
+    - train
+    - validation
+
+  test:
+    - test
+
+model:
+  objective: reg:squarederror
+  eval_metric: mae
+  tree_method: hist
+
+  enable_categorical: true
+
+  n_estimators: 800
+  learning_rate: 0.05
+
+  max_depth: 8
+  min_child_weight: 20.0
+
+  subsample: 0.8
+  colsample_bytree: 0.9
+
+  reg_alpha: 0.0
+  reg_lambda: 2.0
+
+  max_bin: 256
+  max_cat_to_onehot: 4
+  max_cat_threshold: 64
+
+  early_stopping_rounds: 50
+
+  random_state: 42
+  n_jobs: -1
+  verbosity: 1
+
+prediction:
+  minimum_prediction: 0.0
+
+output:
+  compression: zstd
