@@ -38,6 +38,10 @@ from urbanflow.forecasting.features import (
     ForecastFeatureError,
     build_forecast_features,
 )
+from urbanflow.forecasting.xgboost_model import (
+    XGBoostTrainingError,
+    train_xgboost_forecaster,
+)
 
 
 app = typer.Typer(
@@ -105,10 +109,7 @@ def download_data(
         )
         raise typer.Exit(code=1) from error
 
-    size_mb = (
-        destination.stat().st_size
-        / (1024 * 1024)
-    )
+    size_mb = destination.stat().st_size / (1024 * 1024)
 
     console.print(
         "[bold green]Download completed[/bold green]"
@@ -571,6 +572,164 @@ def evaluate_baselines(
     console.print(
         "Predictions: "
         f"{report['predictions']['path']}"
+    )
+
+
+@app.command("train-xgboost")
+def train_xgboost(
+    config_path: Annotated[
+        Path,
+        typer.Option(
+            "--config",
+            help="Path to the XGBoost forecasting YAML configuration.",
+        ),
+    ] = Path(
+        "configs/forecasting/xgboost.yaml"
+    ),
+) -> None:
+    """Train and evaluate the global XGBoost demand forecaster."""
+    console.print(
+        "Training XGBoost forecaster with "
+        f"[bold]{config_path}[/bold]..."
+    )
+    console.print(
+        "Model selection: train → validation"
+    )
+    console.print(
+        "Final refit: train + validation → test"
+    )
+
+    try:
+        report = train_xgboost_forecaster(
+            config_path=config_path
+        )
+    except XGBoostTrainingError as error:
+        console.print(
+            "[bold red]"
+            f"XGBoost training failed: {error}"
+            "[/bold red]"
+        )
+        raise typer.Exit(code=1) from error
+
+    selection = report["model_selection"]
+    validation_metrics = report[
+        "metrics"
+    ]["validation"]
+    test_metrics = report[
+        "metrics"
+    ]["test"]
+
+    test_comparison = report[
+        "baseline_comparison"
+    ]["test"]
+
+    artifacts = report["artifacts"]
+    effective_paths = report[
+        "effective_config"
+    ]["paths"]
+
+    relative_mae_improvement = (
+        float(
+            test_comparison[
+                "mae_relative_improvement"
+            ]
+        )
+        * 100.0
+    )
+
+    beats_baseline = bool(
+        test_comparison[
+            "beats_baseline_by_mae"
+        ]
+    )
+
+    baseline_name = test_comparison[
+        "baseline"
+    ]
+
+    baseline_mae = float(
+        test_comparison[
+            "baseline_metrics"
+        ]["mae"]
+    )
+
+    status_text = (
+        "[bold green]yes[/bold green]"
+        if beats_baseline
+        else "[bold yellow]no[/bold yellow]"
+    )
+
+    console.print(
+        "[bold green]"
+        "XGBoost training completed"
+        "[/bold green]"
+    )
+    console.print(
+        "Selected estimators: "
+        f"{selection['selected_n_estimators']:,}"
+    )
+    console.print(
+        "Best validation iteration: "
+        f"{selection['best_iteration']:,}"
+    )
+    console.print(
+        "Early-stopping validation MAE: "
+        f"{selection['best_score']:,.4f}"
+    )
+
+    console.print(
+        "Validation MAE: "
+        f"{validation_metrics['mae']:,.4f}"
+    )
+    console.print(
+        "Validation WAPE: "
+        f"{validation_metrics['wape'] * 100:,.2f}%"
+    )
+
+    console.print(
+        f"Test MAE: {test_metrics['mae']:,.4f}"
+    )
+    console.print(
+        "Test RMSE: "
+        f"{test_metrics['rmse']:,.4f}"
+    )
+    console.print(
+        "Test WAPE: "
+        f"{test_metrics['wape'] * 100:,.2f}%"
+    )
+    console.print(
+        "Test mean bias: "
+        f"{test_metrics['mean_bias']:,.4f}"
+    )
+
+    console.print(
+        f"Strongest baseline: {baseline_name}"
+    )
+    console.print(
+        f"Baseline test MAE: {baseline_mae:,.4f}"
+    )
+    console.print(
+        "Relative MAE improvement: "
+        f"{relative_mae_improvement:,.2f}%"
+    )
+    console.print(
+        f"Beats baseline: {status_text}"
+    )
+
+    console.print(
+        "Model: "
+        f"{artifacts['model']['path']}"
+    )
+    console.print(
+        "Predictions: "
+        f"{artifacts['predictions']['path']}"
+    )
+    console.print(
+        "Feature importance: "
+        f"{artifacts['feature_importance']['path']}"
+    )
+    console.print(
+        f"Report: {effective_paths['report']}"
     )
 
 

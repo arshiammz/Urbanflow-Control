@@ -12,6 +12,9 @@ Requires-Dist: pyyaml
 Requires-Dist: typer
 Requires-Dist: rich
 Requires-Dist: httpx
+Requires-Dist: numpy==2.5.1
+Requires-Dist: scikit-learn==1.9.0
+Requires-Dist: xgboost==3.3.0
 Provides-Extra: dev
 Requires-Dist: pytest; extra == "dev"
 Requires-Dist: pytest-cov; extra == "dev"
