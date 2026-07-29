@@ -1,0 +1,53 @@
+dataset:
+  name: hvfhv_xgboost_prediction_calibration
+  timezone: America/New_York
+
+paths:
+  features: data/processed/full/forecast_features_15m_2024-01_2024-06.parquet
+  predictions: data/processed/full/xgboost_predictions_15m_2024-01_2024-06.parquet
+
+  calibrated_predictions: data/processed/full/xgboost_calibrated_predictions_15m_2024-01_2024-06.parquet
+
+  calibration_artifact: artifacts/models/xgboost-demand/calibration.json
+
+  report: reports/forecasting/2024-01_2024-06-xgboost-calibration.json
+
+schema:
+  key_columns:
+    - interval_start
+    - zone_id
+
+  split_column: split
+  target_column: target_pickup_count
+  prediction_column: prediction
+  baseline_column: pickup_count_lag_1
+
+calibration:
+  fit_split: validation
+
+  apply_splits:
+    - validation
+    - test
+
+  prediction_band_upper_bounds:
+    - 1
+    - 5
+    - 15
+    - 30
+    - 60
+
+  minimum_rows_per_band: 1000
+
+  shrinkage_candidates:
+    - 0.0
+    - 0.25
+    - 0.5
+    - 0.75
+    - 1.0
+
+  selection_metric: mae
+
+  high_demand_threshold: 60
+
+output:
+  compression: zstd

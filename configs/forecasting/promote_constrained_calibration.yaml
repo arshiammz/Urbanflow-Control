@@ -1,0 +1,42 @@
+dataset:
+  name: hvfhv_xgboost_constrained_calibration
+
+paths:
+  experiment_report: reports/forecasting/2024-01_2024-06-xgboost-constrained-calibration-experiment.json
+
+  experiment_predictions: data/processed/full/xgboost_calibrated_predictions_15m_2024-01_2024-06.parquet
+
+  output_predictions: data/processed/full/xgboost_constrained_predictions_15m_2024-01_2024-06.parquet
+
+  artifact: artifacts/models/xgboost-demand/constrained_calibration.json
+
+  report: reports/forecasting/2024-01_2024-06-xgboost-constrained-calibration-promotion.json
+
+schema:
+  key_columns:
+    - interval_start
+    - zone_id
+
+  split_column: split
+  target_column: target_pickup_count
+  raw_prediction_column: raw_prediction
+  baseline_prediction_column: baseline_prediction
+  prediction_band_column: prediction_band
+  correction_column: base_correction
+
+contract:
+  fit_split: validation
+  evaluation_split: test
+
+  ordered_prediction_bands:
+    - <=1
+    - 1-5
+    - 5-15
+    - 15-30
+    - 30-60
+    - ">60"
+
+  high_demand_threshold: 60.0
+
+output:
+  compression: zstd

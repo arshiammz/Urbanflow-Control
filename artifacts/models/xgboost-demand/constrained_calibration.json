@@ -1,0 +1,63 @@
+{
+  "artifact_version": "1.0.0",
+  "generated_at": "2026-07-29T21:33:33.736354+00:00",
+  "dataset_name": "hvfhv_xgboost_constrained_calibration",
+  "status": "accepted_operational_postprocessor",
+  "selection_source": {
+    "experiment_report": "reports/forecasting/2024-01_2024-06-xgboost-constrained-calibration-experiment.json",
+    "experiment_report_sha256": "76199cdd7c5ab279ed7bb2f1d2c67a906cd42088e9809bb2ed1e596ff9535a4c",
+    "fit_split": "validation",
+    "test_used_for_selection": false
+  },
+  "selected_candidate": {
+    "maximum_calibrated_band": "5-15",
+    "maximum_band_order": 2,
+    "shrinkage": 1.0
+  },
+  "mapping": [
+    {
+      "prediction_band": "<=1",
+      "band_order": 0,
+      "base_correction": -0.045549701899290085,
+      "selected_for_calibration": true,
+      "effective_correction": -0.045549701899290085
+    },
+    {
+      "prediction_band": "1-5",
+      "band_order": 1,
+      "base_correction": -0.1677107810974121,
+      "selected_for_calibration": true,
+      "effective_correction": -0.1677107810974121
+    },
+    {
+      "prediction_band": "5-15",
+      "band_order": 2,
+      "base_correction": -0.19503116607666016,
+      "selected_for_calibration": true,
+      "effective_correction": -0.19503116607666016
+    },
+    {
+      "prediction_band": "15-30",
+      "band_order": 3,
+      "base_correction": -0.2558746337890625,
+      "selected_for_calibration": false,
+      "effective_correction": 0.0
+    },
+    {
+      "prediction_band": "30-60",
+      "band_order": 4,
+      "base_correction": -0.3418159484863281,
+      "selected_for_calibration": false,
+      "effective_correction": 0.0
+    },
+    {
+      "prediction_band": ">60",
+      "band_order": 5,
+      "base_correction": -0.74188232421875,
+      "selected_for_calibration": false,
+      "effective_correction": 0.0
+    }
+  ],
+  "source_predictions": "data/processed/full/xgboost_calibrated_predictions_15m_2024-01_2024-06.parquet",
+  "output_predictions": "data/processed/full/xgboost_constrained_predictions_15m_2024-01_2024-06.parquet"
+}
