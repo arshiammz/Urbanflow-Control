@@ -1,0 +1,485 @@
+{
+  "simulation_version": "0.1.0",
+  "config": "configs/simulation/fleet_simulator_smoke.yaml",
+  "zone_ids": [
+    101,
+    102,
+    103
+  ],
+  "initial_fleet": 16,
+  "transitions": [
+    {
+      "step": 0,
+      "arrivals_released": [
+        0,
+        0,
+        0
+      ],
+      "demand": [
+        6,
+        4,
+        2
+      ],
+      "relocation_action": [
+        [
+          0,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      "served_demand": [
+        6,
+        4,
+        2
+      ],
+      "unmet_demand": [
+        0,
+        0,
+        0
+      ],
+      "idle_vehicles": [
+        1,
+        1,
+        1
+      ],
+      "passenger_flow": [
+        [
+          1,
+          4,
+          1
+        ],
+        [
+          1,
+          1,
+          2
+        ],
+        [
+          1,
+          1,
+          0
+        ]
+      ],
+      "available_vehicles_end": [
+        1,
+        1,
+        1
+      ],
+      "in_transit_vehicles_end": [
+        3,
+        7,
+        3
+      ],
+      "metrics": {
+        "demand_total": 12,
+        "served_demand_total": 12,
+        "unmet_demand_total": 0,
+        "idle_vehicle_total": 3,
+        "relocated_vehicle_total": 1,
+        "relocation_vehicle_steps": 1,
+        "passenger_trip_total": 12,
+        "arrivals_released_total": 0,
+        "service_rate": 1.0,
+        "unmet_demand_cost": 0.0,
+        "relocation_cost": 0.5,
+        "idle_vehicle_cost": 0.30000000000000004,
+        "total_operating_cost": 0.8
+      },
+      "fleet_conservation_passed": true
+    },
+    {
+      "step": 1,
+      "arrivals_released": [
+        2,
+        7,
+        2
+      ],
+      "demand": [
+        7,
+        3,
+        4
+      ],
+      "relocation_action": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      "served_demand": [
+        3,
+        3,
+        3
+      ],
+      "unmet_demand": [
+        4,
+        0,
+        1
+      ],
+      "idle_vehicles": [
+        0,
+        4,
+        0
+      ],
+      "passenger_flow": [
+        [
+          0,
+          2,
+          1
+        ],
+        [
+          1,
+          1,
+          1
+        ],
+        [
+          1,
+          1,
+          1
+        ]
+      ],
+      "available_vehicles_end": [
+        0,
+        4,
+        0
+      ],
+      "in_transit_vehicles_end": [
+        3,
+        4,
+        5
+      ],
+      "metrics": {
+        "demand_total": 14,
+        "served_demand_total": 9,
+        "unmet_demand_total": 5,
+        "idle_vehicle_total": 4,
+        "relocated_vehicle_total": 1,
+        "relocation_vehicle_steps": 1,
+        "passenger_trip_total": 9,
+        "arrivals_released_total": 11,
+        "service_rate": 0.6428571428571429,
+        "unmet_demand_cost": 50.0,
+        "relocation_cost": 0.5,
+        "idle_vehicle_cost": 0.4,
+        "total_operating_cost": 50.9
+      },
+      "fleet_conservation_passed": true
+    },
+    {
+      "step": 2,
+      "arrivals_released": [
+        2,
+        4,
+        4
+      ],
+      "demand": [
+        5,
+        5,
+        3
+      ],
+      "relocation_action": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      "served_demand": [
+        2,
+        5,
+        3
+      ],
+      "unmet_demand": [
+        3,
+        0,
+        0
+      ],
+      "idle_vehicles": [
+        0,
+        2,
+        1
+      ],
+      "passenger_flow": [
+        [
+          0,
+          1,
+          1
+        ],
+        [
+          2,
+          1,
+          2
+        ],
+        [
+          1,
+          1,
+          1
+        ]
+      ],
+      "available_vehicles_end": [
+        0,
+        2,
+        1
+      ],
+      "in_transit_vehicles_end": [
+        5,
+        3,
+        5
+      ],
+      "metrics": {
+        "demand_total": 13,
+        "served_demand_total": 10,
+        "unmet_demand_total": 3,
+        "idle_vehicle_total": 3,
+        "relocated_vehicle_total": 1,
+        "relocation_vehicle_steps": 1,
+        "passenger_trip_total": 10,
+        "arrivals_released_total": 10,
+        "service_rate": 0.7692307692307693,
+        "unmet_demand_cost": 30.0,
+        "relocation_cost": 0.5,
+        "idle_vehicle_cost": 0.30000000000000004,
+        "total_operating_cost": 30.8
+      },
+      "fleet_conservation_passed": true
+    },
+    {
+      "step": 3,
+      "arrivals_released": [
+        4,
+        3,
+        4
+      ],
+      "demand": [
+        4,
+        6,
+        2
+      ],
+      "relocation_action": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          0
+        ]
+      ],
+      "served_demand": [
+        4,
+        5,
+        2
+      ],
+      "unmet_demand": [
+        0,
+        1,
+        0
+      ],
+      "idle_vehicles": [
+        0,
+        0,
+        2
+      ],
+      "passenger_flow": [
+        [
+          0,
+          3,
+          1
+        ],
+        [
+          2,
+          1,
+          2
+        ],
+        [
+          1,
+          1,
+          0
+        ]
+      ],
+      "available_vehicles_end": [
+        0,
+        0,
+        2
+      ],
+      "in_transit_vehicles_end": [
+        4,
+        6,
+        4
+      ],
+      "metrics": {
+        "demand_total": 12,
+        "served_demand_total": 11,
+        "unmet_demand_total": 1,
+        "idle_vehicle_total": 2,
+        "relocated_vehicle_total": 1,
+        "relocation_vehicle_steps": 1,
+        "passenger_trip_total": 11,
+        "arrivals_released_total": 11,
+        "service_rate": 0.9166666666666666,
+        "unmet_demand_cost": 10.0,
+        "relocation_cost": 0.5,
+        "idle_vehicle_cost": 0.2,
+        "total_operating_cost": 10.7
+      },
+      "fleet_conservation_passed": true
+    },
+    {
+      "step": 4,
+      "arrivals_released": [
+        3,
+        6,
+        3
+      ],
+      "demand": [
+        6,
+        4,
+        3
+      ],
+      "relocation_action": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      "served_demand": [
+        3,
+        4,
+        3
+      ],
+      "unmet_demand": [
+        3,
+        0,
+        0
+      ],
+      "idle_vehicles": [
+        0,
+        2,
+        2
+      ],
+      "passenger_flow": [
+        [
+          0,
+          2,
+          1
+        ],
+        [
+          1,
+          1,
+          2
+        ],
+        [
+          1,
+          1,
+          1
+        ]
+      ],
+      "available_vehicles_end": [
+        0,
+        2,
+        2
+      ],
+      "in_transit_vehicles_end": [
+        3,
+        4,
+        5
+      ],
+      "metrics": {
+        "demand_total": 13,
+        "served_demand_total": 10,
+        "unmet_demand_total": 3,
+        "idle_vehicle_total": 4,
+        "relocated_vehicle_total": 0,
+        "relocation_vehicle_steps": 0,
+        "passenger_trip_total": 10,
+        "arrivals_released_total": 12,
+        "service_rate": 0.7692307692307693,
+        "unmet_demand_cost": 30.0,
+        "relocation_cost": 0.0,
+        "idle_vehicle_cost": 0.4,
+        "total_operating_cost": 30.4
+      },
+      "fleet_conservation_passed": true
+    }
+  ],
+  "summary": {
+    "completed_steps": 5,
+    "total_fleet": 16,
+    "demand_total": 64,
+    "served_demand_total": 52,
+    "unmet_demand_total": 12,
+    "service_rate": 0.8125,
+    "relocated_vehicle_total": 4,
+    "total_operating_cost": 123.6,
+    "snapshot": {
+      "step": 5,
+      "available_vehicles": [
+        0,
+        2,
+        2
+      ],
+      "in_transit_vehicles": [
+        3,
+        4,
+        5
+      ],
+      "scheduled_arrival_steps": [
+        5,
+        6
+      ],
+      "total_fleet": 16
+    }
+  },
+  "invariants": {
+    "all_steps_preserve_fleet": true,
+    "completed_step_count_matches": true,
+    "final_fleet_is_conserved": true
+  }
+}

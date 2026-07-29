@@ -1,0 +1,67 @@
+simulation:
+  zone_ids:
+    - 101
+    - 102
+    - 103
+
+  initial_vehicles:
+    - 8
+    - 5
+    - 3
+
+  passenger_destination_probabilities:
+    - [0.10, 0.70, 0.20]
+    - [0.30, 0.20, 0.50]
+    - [0.40, 0.40, 0.20]
+
+  relocation_travel_steps:
+    - [0, 1, 2]
+    - [1, 0, 1]
+    - [2, 1, 0]
+
+  passenger_travel_steps:
+    - [1, 1, 2]
+    - [1, 1, 1]
+    - [2, 1, 1]
+
+  costs:
+    unmet_demand_penalty: 10.0
+    relocation_cost_per_vehicle_step: 0.5
+    idle_vehicle_cost: 0.1
+
+scenario:
+  demands:
+    - [6, 4, 2]
+    - [7, 3, 4]
+    - [5, 5, 3]
+    - [4, 6, 2]
+    - [6, 4, 3]
+
+  relocation_actions:
+    -
+      - [0, 1, 0]
+      - [0, 0, 0]
+      - [0, 0, 0]
+
+    -
+      - [0, 0, 0]
+      - [0, 0, 1]
+      - [0, 0, 0]
+
+    -
+      - [0, 0, 0]
+      - [1, 0, 0]
+      - [0, 0, 0]
+
+    -
+      - [0, 0, 0]
+      - [0, 0, 0]
+      - [0, 1, 0]
+
+    -
+      - [0, 0, 0]
+      - [0, 0, 0]
+      - [0, 0, 0]
+
+output:
+  report: reports/simulation/fleet-simulator-smoke.json

@@ -1,0 +1,423 @@
+{
+  "simulation_report_version": "1.0.0",
+  "generated_at": "2026-07-29T22:26:57.606993+00:00",
+  "dataset_name": "nyc_hvfhv_real_episode_baseline",
+  "policy": {
+    "name": "no_rebalancing",
+    "uses_forecast": false,
+    "uses_relocation": false
+  },
+  "episode": {
+    "evaluation_split": "validation",
+    "service_date": "2024-05-15",
+    "warmup_days": 1,
+    "warmup_step_count": 96,
+    "evaluation_step_count": 96,
+    "first_interval": "2024-05-14T00:00:00-04:00",
+    "last_interval": "2024-05-15T23:45:00-04:00"
+  },
+  "network": {
+    "zone_count": 30,
+    "zone_ids": [
+      138,
+      132,
+      79,
+      61,
+      230,
+      161,
+      231,
+      68,
+      246,
+      37,
+      234,
+      76,
+      164,
+      148,
+      255,
+      249,
+      181,
+      7,
+      48,
+      170,
+      112,
+      42,
+      163,
+      17,
+      256,
+      237,
+      107,
+      162,
+      145,
+      225
+    ],
+    "od_pair_count": 900
+  },
+  "fleet_sizing": {
+    "method": "little_law_expected_concurrent_vehicles",
+    "estimated_busy_vehicles": 3828.965474692649,
+    "reserve_multiplier": 1.2,
+    "total_fleet": 4595,
+    "zone_allocations": [
+      {
+        "zone_id": 138,
+        "training_mean_demand": 127.18034734917732,
+        "expected_travel_steps": 2.4530351248975495,
+        "initial_vehicles": 261
+      },
+      {
+        "zone_id": 132,
+        "training_mean_demand": 121.34844606946983,
+        "expected_travel_steps": 3.1720753187080497,
+        "initial_vehicles": 255
+      },
+      {
+        "zone_id": 79,
+        "training_mean_demand": 96.3109689213894,
+        "expected_travel_steps": 1.5597688949413224,
+        "initial_vehicles": 199
+      },
+      {
+        "zone_id": 61,
+        "training_mean_demand": 92.06188299817185,
+        "expected_travel_steps": 1.546257979161748,
+        "initial_vehicles": 191
+      },
+      {
+        "zone_id": 230,
+        "training_mean_demand": 85.15767824497257,
+        "expected_travel_steps": 1.7768008398212227,
+        "initial_vehicles": 177
+      },
+      {
+        "zone_id": 161,
+        "training_mean_demand": 83.34881170018282,
+        "expected_travel_steps": 1.709743857102934,
+        "initial_vehicles": 172
+      },
+      {
+        "zone_id": 231,
+        "training_mean_demand": 81.86800731261425,
+        "expected_travel_steps": 1.684883983210419,
+        "initial_vehicles": 169
+      },
+      {
+        "zone_id": 68,
+        "training_mean_demand": 77.0508226691042,
+        "expected_travel_steps": 1.8311834240808837,
+        "initial_vehicles": 160
+      },
+      {
+        "zone_id": 246,
+        "training_mean_demand": 76.0573126142596,
+        "expected_travel_steps": 1.689864501546225,
+        "initial_vehicles": 157
+      },
+      {
+        "zone_id": 37,
+        "training_mean_demand": 74.82769652650822,
+        "expected_travel_steps": 1.5103768487706841,
+        "initial_vehicles": 157
+      },
+      {
+        "zone_id": 234,
+        "training_mean_demand": 75.62367458866545,
+        "expected_travel_steps": 1.6013992402750399,
+        "initial_vehicles": 157
+      },
+      {
+        "zone_id": 76,
+        "training_mean_demand": 74.87934186471664,
+        "expected_travel_steps": 1.3187460058617426,
+        "initial_vehicles": 157
+      },
+      {
+        "zone_id": 164,
+        "training_mean_demand": 73.09762340036563,
+        "expected_travel_steps": 1.5279508138355729,
+        "initial_vehicles": 152
+      },
+      {
+        "zone_id": 148,
+        "training_mean_demand": 72.8201096892139,
+        "expected_travel_steps": 1.5967753988715765,
+        "initial_vehicles": 152
+      },
+      {
+        "zone_id": 255,
+        "training_mean_demand": 69.43546617915905,
+        "expected_travel_steps": 1.6381158843562595,
+        "initial_vehicles": 145
+      },
+      {
+        "zone_id": 249,
+        "training_mean_demand": 68.69506398537477,
+        "expected_travel_steps": 1.5875566870872784,
+        "initial_vehicles": 144
+      },
+      {
+        "zone_id": 181,
+        "training_mean_demand": 67.71425959780622,
+        "expected_travel_steps": 1.864949780538422,
+        "initial_vehicles": 142
+      },
+      {
+        "zone_id": 7,
+        "training_mean_demand": 67.22842778793418,
+        "expected_travel_steps": 1.4809530072715655,
+        "initial_vehicles": 142
+      },
+      {
+        "zone_id": 48,
+        "training_mean_demand": 67.50411334552102,
+        "expected_travel_steps": 1.697323062887235,
+        "initial_vehicles": 141
+      },
+      {
+        "zone_id": 170,
+        "training_mean_demand": 65.03436928702011,
+        "expected_travel_steps": 1.5073040793127435,
+        "initial_vehicles": 136
+      },
+      {
+        "zone_id": 112,
+        "training_mean_demand": 63.87010968921389,
+        "expected_travel_steps": 1.513078384696423,
+        "initial_vehicles": 134
+      },
+      {
+        "zone_id": 42,
+        "training_mean_demand": 63.121572212065814,
+        "expected_travel_steps": 1.6113470315287006,
+        "initial_vehicles": 133
+      },
+      {
+        "zone_id": 163,
+        "training_mean_demand": 58.65959780621572,
+        "expected_travel_steps": 1.7996074842252487,
+        "initial_vehicles": 123
+      },
+      {
+        "zone_id": 17,
+        "training_mean_demand": 58.12961608775137,
+        "expected_travel_steps": 1.419766730722067,
+        "initial_vehicles": 123
+      },
+      {
+        "zone_id": 256,
+        "training_mean_demand": 57.48875685557587,
+        "expected_travel_steps": 1.5273799251398938,
+        "initial_vehicles": 121
+      },
+      {
+        "zone_id": 237,
+        "training_mean_demand": 57.31864716636198,
+        "expected_travel_steps": 1.6297723589840134,
+        "initial_vehicles": 120
+      },
+      {
+        "zone_id": 107,
+        "training_mean_demand": 57.040219378427786,
+        "expected_travel_steps": 1.5438114152267712,
+        "initial_vehicles": 120
+      },
+      {
+        "zone_id": 162,
+        "training_mean_demand": 56.651371115173674,
+        "expected_travel_steps": 1.5859031605995118,
+        "initial_vehicles": 119
+      },
+      {
+        "zone_id": 145,
+        "training_mean_demand": 56.07915904936014,
+        "expected_travel_steps": 1.5351029351348888,
+        "initial_vehicles": 119
+      },
+      {
+        "zone_id": 225,
+        "training_mean_demand": 55.56572212065814,
+        "expected_travel_steps": 1.5183857041575939,
+        "initial_vehicles": 117
+      }
+    ]
+  },
+  "cost_configuration": {
+    "unmet_demand_penalty": 10.0,
+    "relocation_cost_per_vehicle_step": 0.5,
+    "idle_vehicle_cost": 0.01,
+    "currency": null,
+    "costs_are_normalized_objective_units": true
+  },
+  "evaluation_metrics": {
+    "demand_total": 222659,
+    "served_demand_total": 131212,
+    "unmet_demand_total": 91447,
+    "service_rate": 0.5892957392245541,
+    "average_idle_vehicles": 2264.0833333333335,
+    "relocated_vehicle_total": 0,
+    "unmet_demand_cost": 914470.0,
+    "relocation_cost": 0.0,
+    "idle_vehicle_cost": 2173.52,
+    "total_operating_cost": 916643.52
+  },
+  "top_unmet_zones": [
+    {
+      "zone_index": 0,
+      "zone_id": 138,
+      "interval_count": 96,
+      "demand_total": 14651,
+      "served_demand_total": 7514,
+      "unmet_demand_total": 7137,
+      "maximum_interval_unmet_demand": 244,
+      "mean_idle_vehicles": 278.0625,
+      "mean_available_vehicles_end": 278.0625,
+      "mean_in_transit_vehicles_end": 187.0,
+      "service_rate": 0.5128660159716061
+    },
+    {
+      "zone_index": 5,
+      "zone_id": 161,
+      "interval_count": 96,
+      "demand_total": 11458,
+      "served_demand_total": 4448,
+      "unmet_demand_total": 7010,
+      "maximum_interval_unmet_demand": 256,
+      "mean_idle_vehicles": 1.2395833333333333,
+      "mean_available_vehicles_end": 1.2395833333333333,
+      "mean_in_transit_vehicles_end": 76.52083333333333,
+      "service_rate": 0.38820038401117124
+    },
+    {
+      "zone_index": 4,
+      "zone_id": 230,
+      "interval_count": 96,
+      "demand_total": 10742,
+      "served_demand_total": 5295,
+      "unmet_demand_total": 5447,
+      "maximum_interval_unmet_demand": 169,
+      "mean_idle_vehicles": 0.0,
+      "mean_available_vehicles_end": 0.0,
+      "mean_in_transit_vehicles_end": 106.88541666666667,
+      "service_rate": 0.4929249674176131
+    },
+    {
+      "zone_index": 22,
+      "zone_id": 163,
+      "interval_count": 96,
+      "demand_total": 7979,
+      "served_demand_total": 3059,
+      "unmet_demand_total": 4920,
+      "maximum_interval_unmet_demand": 135,
+      "mean_idle_vehicles": 0.020833333333333332,
+      "mean_available_vehicles_end": 0.020833333333333332,
+      "mean_in_transit_vehicles_end": 57.208333333333336,
+      "service_rate": 0.3833813761122948
+    },
+    {
+      "zone_index": 21,
+      "zone_id": 42,
+      "interval_count": 96,
+      "demand_total": 5795,
+      "served_demand_total": 1046,
+      "unmet_demand_total": 4749,
+      "maximum_interval_unmet_demand": 130,
+      "mean_idle_vehicles": 0.0,
+      "mean_available_vehicles_end": 0.0,
+      "mean_in_transit_vehicles_end": 16.802083333333332,
+      "service_rate": 0.1805004314063848
+    },
+    {
+      "zone_index": 6,
+      "zone_id": 231,
+      "interval_count": 96,
+      "demand_total": 8876,
+      "served_demand_total": 4138,
+      "unmet_demand_total": 4738,
+      "maximum_interval_unmet_demand": 120,
+      "mean_idle_vehicles": 8.21875,
+      "mean_available_vehicles_end": 8.21875,
+      "mean_in_transit_vehicles_end": 78.91666666666667,
+      "service_rate": 0.4662009914375845
+    },
+    {
+      "zone_index": 25,
+      "zone_id": 237,
+      "interval_count": 96,
+      "demand_total": 7330,
+      "served_demand_total": 2781,
+      "unmet_demand_total": 4549,
+      "maximum_interval_unmet_demand": 129,
+      "mean_idle_vehicles": 25.0,
+      "mean_available_vehicles_end": 25.0,
+      "mean_in_transit_vehicles_end": 44.71875,
+      "service_rate": 0.37939972714870396
+    },
+    {
+      "zone_index": 1,
+      "zone_id": 132,
+      "interval_count": 96,
+      "demand_total": 11100,
+      "served_demand_total": 6721,
+      "unmet_demand_total": 4379,
+      "maximum_interval_unmet_demand": 190,
+      "mean_idle_vehicles": 41.875,
+      "mean_available_vehicles_end": 41.875,
+      "mean_in_transit_vehicles_end": 225.23958333333334,
+      "service_rate": 0.6054954954954955
+    },
+    {
+      "zone_index": 8,
+      "zone_id": 246,
+      "interval_count": 96,
+      "demand_total": 8970,
+      "served_demand_total": 4757,
+      "unmet_demand_total": 4213,
+      "maximum_interval_unmet_demand": 132,
+      "mean_idle_vehicles": 38.479166666666664,
+      "mean_available_vehicles_end": 38.479166666666664,
+      "mean_in_transit_vehicles_end": 76.46875,
+      "service_rate": 0.5303232998885172
+    },
+    {
+      "zone_index": 27,
+      "zone_id": 162,
+      "interval_count": 96,
+      "demand_total": 7611,
+      "served_demand_total": 3406,
+      "unmet_demand_total": 4205,
+      "maximum_interval_unmet_demand": 143,
+      "mean_idle_vehicles": 0.6458333333333334,
+      "mean_available_vehicles_end": 0.6458333333333334,
+      "mean_in_transit_vehicles_end": 56.5625,
+      "service_rate": 0.4475101826304034
+    }
+  ],
+  "artifacts": {
+    "step_metrics": {
+      "path": "reports/simulation/real_episode_baseline/2024-05-15-step-metrics.parquet",
+      "row_count": 192,
+      "column_count": 18,
+      "size_bytes": 14913
+    },
+    "interval_zone_metrics": {
+      "path": "reports/simulation/real_episode_baseline/2024-05-15-interval-zone-metrics.parquet",
+      "row_count": 2880,
+      "column_count": 11,
+      "size_bytes": 23974
+    },
+    "zone_summary": {
+      "path": "reports/simulation/real_episode_baseline/2024-05-15-zone-summary.parquet",
+      "row_count": 30,
+      "column_count": 11,
+      "size_bytes": 5638
+    }
+  },
+  "invariants": {
+    "all_steps_preserve_fleet": true,
+    "final_fleet_is_conserved": true,
+    "no_relocation_was_applied": true,
+    "served_plus_unmet_equals_demand": true,
+    "evaluation_demand_matches_zone_records": true,
+    "evaluation_zone_grid_is_dense": true,
+    "fleet_sizing_uses_training_split_only": true
+  }
+}
