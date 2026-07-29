@@ -1,0 +1,18 @@
+dataset:
+  name: hvfhv_final_forecasting_comparison
+
+paths:
+  raw_tables_directory: reports/forecasting/error_analysis
+  champion_tables_directory: reports/forecasting/champion_error_analysis
+
+  output_tables_directory: reports/forecasting/final_model_comparison
+
+  report: reports/forecasting/2024-01_2024-06-final-model-comparison.json
+
+analysis:
+  evaluation_split: test
+  floating_tolerance: 1.0e-9
+  top_n_zones: 20
+
+output:
+  compression: zstd

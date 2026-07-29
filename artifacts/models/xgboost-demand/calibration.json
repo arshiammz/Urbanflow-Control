@@ -1,0 +1,92 @@
+{
+  "calibration_version": "0.1.0",
+  "generated_at": "2026-07-29T21:09:00.962139+00:00",
+  "dataset_name": "hvfhv_xgboost_prediction_calibration",
+  "fit_split": "validation",
+  "test_was_used_for_selection": false,
+  "selection_metric": "mae",
+  "selected_shrinkage": 1.0,
+  "prediction_band_upper_bounds": [
+    1.0,
+    5.0,
+    15.0,
+    30.0,
+    60.0
+  ],
+  "minimum_rows_per_band": 1000,
+  "mapping": [
+    {
+      "prediction_band": "<=1",
+      "band_order": 0,
+      "row_count": 62793,
+      "actual_mean": 0.3550714251588553,
+      "raw_prediction_mean": 0.3396214990227984,
+      "median_residual": -0.045549701899290085,
+      "mean_residual": 0.01544992613605686,
+      "raw_mae": 0.3982659051229681,
+      "eligible_for_calibration": true,
+      "base_correction": -0.045549701899290085
+    },
+    {
+      "prediction_band": "1-5",
+      "band_order": 1,
+      "row_count": 99643,
+      "actual_mean": 2.9456860993747678,
+      "raw_prediction_mean": 2.8980640723381486,
+      "median_residual": -0.1677107810974121,
+      "mean_residual": 0.04762202703661953,
+      "raw_mae": 1.4111938729031177,
+      "eligible_for_calibration": true,
+      "base_correction": -0.1677107810974121
+    },
+    {
+      "prediction_band": "5-15",
+      "band_order": 2,
+      "row_count": 187166,
+      "actual_mean": 9.714002543196948,
+      "raw_prediction_mean": 9.677538750883302,
+      "median_residual": -0.19503116607666016,
+      "mean_residual": 0.036463792313646194,
+      "raw_mae": 2.6435463906465637,
+      "eligible_for_calibration": true,
+      "base_correction": -0.19503116607666016
+    },
+    {
+      "prediction_band": "15-30",
+      "band_order": 3,
+      "row_count": 183253,
+      "actual_mean": 21.60114159113357,
+      "raw_prediction_mean": 21.594948732020207,
+      "median_residual": -0.2558746337890625,
+      "mean_residual": 0.00619285911336114,
+      "raw_mae": 4.0745582979255595,
+      "eligible_for_calibration": true,
+      "base_correction": -0.2558746337890625
+    },
+    {
+      "prediction_band": "30-60",
+      "band_order": 4,
+      "row_count": 163726,
+      "actual_mean": 42.75859057205331,
+      "raw_prediction_mean": 42.7649534586789,
+      "median_residual": -0.3418159484863281,
+      "mean_residual": -0.006362886625595394,
+      "raw_mae": 5.914317386519042,
+      "eligible_for_calibration": true,
+      "base_correction": -0.3418159484863281
+    },
+    {
+      "prediction_band": ">60",
+      "band_order": 5,
+      "row_count": 83131,
+      "actual_mean": 91.5492896753317,
+      "raw_prediction_mean": 91.59069301336643,
+      "median_residual": -0.74188232421875,
+      "mean_residual": -0.04140333803472879,
+      "raw_mae": 10.24319803551994,
+      "eligible_for_calibration": true,
+      "base_correction": -0.74188232421875
+    }
+  ],
+  "source_prediction_path": "data/processed/full/xgboost_predictions_15m_2024-01_2024-06.parquet"
+}

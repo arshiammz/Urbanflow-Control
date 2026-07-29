@@ -1,0 +1,61 @@
+dataset:
+  name: hvfhv_xgboost_operational_champion
+  timezone: America/New_York
+
+paths:
+  features: data/processed/full/forecast_features_15m_2024-01_2024-06.parquet
+
+  predictions: data/processed/full/xgboost_constrained_predictions_15m_2024-01_2024-06.parquet
+
+  report: reports/forecasting/2024-01_2024-06-xgboost-champion-error-analysis.json
+
+  tables_directory: reports/forecasting/champion_error_analysis
+
+schema:
+  key_columns:
+    - interval_start
+    - zone_id
+
+  split_column: split
+  target_column: target_pickup_count
+
+  prediction_column: constrained_prediction
+
+  baseline_column: pickup_count_lag_1
+
+  metadata_columns:
+    - zone_name
+    - borough
+    - service_zone
+    - day_of_week
+    - hour
+    - minute
+    - minute_of_day
+    - is_weekend
+
+analysis:
+  splits:
+    - validation
+    - test
+
+  top_n_worst_predictions: 100
+  top_n_zones: 20
+  minimum_zone_rows: 1000
+
+  demand_band_upper_bounds:
+    - 0
+    - 5
+    - 15
+    - 30
+    - 60
+
+  morning_peak:
+    start_hour: 7
+    end_hour_exclusive: 11
+
+  evening_peak:
+    start_hour: 16
+    end_hour_exclusive: 20
+
+output:
+  compression: zstd
