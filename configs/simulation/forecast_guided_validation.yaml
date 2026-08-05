@@ -1,0 +1,25 @@
+dataset:
+  name: nyc_hvfhv_forecast_guided_continuous_validation
+
+paths:
+  baseline_config: configs/simulation/real_episode_baseline.yaml
+
+  heuristic_config: configs/simulation/forecast_guided_heuristic.yaml
+
+  step_metrics: reports/simulation/forecast_guided_validation/2024-05-02_2024-05-30-step-metrics.parquet
+
+  daily_metrics: reports/simulation/forecast_guided_validation/2024-05-02_2024-05-30-daily-metrics.parquet
+
+  daily_zone_metrics: reports/simulation/forecast_guided_validation/2024-05-02_2024-05-30-daily-zone-metrics.parquet
+
+  zone_summary: reports/simulation/forecast_guided_validation/2024-05-02_2024-05-30-zone-summary.parquet
+
+  report: reports/simulation/2024-05-02_2024-05-30-forecast-guided-validation.json
+
+validation:
+  split: validation
+  start_date: "2024-05-02"
+  end_date_inclusive: "2024-05-30"
+
+output:
+  compression: zstd
