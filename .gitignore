@@ -48,3 +48,6 @@ mlruns/
 # Logs and temporary downloads
 *.log
 *.part
+# Generated simulation datasets and reports
+data/processed/simulation/**/*.parquet
+reports/simulation/**/*.parquet
