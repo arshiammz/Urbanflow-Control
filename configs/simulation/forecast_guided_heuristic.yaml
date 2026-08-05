@@ -1,0 +1,39 @@
+dataset:
+  name: nyc_hvfhv_forecast_guided_rebalancing
+
+paths:
+  baseline_config: configs/simulation/real_episode_baseline.yaml
+
+  forecast_predictions: data/processed/full/xgboost_constrained_predictions_15m_2024-01_2024-06.parquet
+
+  step_metrics: reports/simulation/forecast_guided_heuristic/2024-05-15-step-metrics.parquet
+
+  interval_zone_metrics: reports/simulation/forecast_guided_heuristic/2024-05-15-interval-zone-metrics.parquet
+
+  zone_summary: reports/simulation/forecast_guided_heuristic/2024-05-15-zone-summary.parquet
+
+  report: reports/simulation/2024-05-15-forecast-guided-heuristic.json
+
+forecast:
+  timestamp_column: interval_start
+  zone_column: zone_id
+  prediction_column: constrained_prediction
+  split_column: split
+
+policy:
+  name: forecast_guided_greedy
+
+  forecast_horizon_steps: 4
+  demand_buffer_multiplier: 1.05
+
+  minimum_zone_reserve: 2
+
+  maximum_relocation_steps: 2
+  maximum_relocation_fraction: 0.15
+
+  in_transit_supply_credit: 0.25
+
+  apply_during_warmup: false
+
+output:
+  compression: zstd
