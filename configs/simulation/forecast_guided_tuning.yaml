@@ -1,0 +1,55 @@
+dataset:
+  name: nyc_hvfhv_forecast_guided_validation_tuning
+
+paths:
+  baseline_config: configs/simulation/real_episode_baseline.yaml
+  heuristic_config: configs/simulation/forecast_guided_heuristic.yaml
+
+  candidate_results: reports/simulation/forecast_guided_tuning/2024-05-02_2024-05-30-candidates.parquet
+
+  daily_results: reports/simulation/forecast_guided_tuning/2024-05-02_2024-05-30-daily-results.parquet
+
+  report: reports/simulation/2024-05-02_2024-05-30-forecast-guided-tuning.json
+
+validation:
+  split: validation
+  start_date: "2024-05-02"
+  end_date_inclusive: "2024-05-30"
+
+search:
+  forecast_horizon_steps:
+    - 2
+    - 4
+    - 8
+
+  demand_buffer_multiplier:
+    - 1.00
+    - 1.05
+    - 1.10
+
+  minimum_zone_reserve:
+    - 0
+    - 2
+
+  maximum_relocation_steps:
+    - 1
+    - 2
+
+  maximum_relocation_fraction:
+    - 0.10
+    - 0.15
+    - 0.20
+
+  in_transit_supply_credit:
+    - 0.25
+
+selection:
+  require_every_day_reduce_unmet_demand: true
+  require_every_day_reduce_operating_cost: true
+
+  primary_metric: aggregate_operating_cost
+  first_tie_breaker: worst_day_service_rate_improvement
+  second_tie_breaker: relocation_vehicle_steps
+
+output:
+  compression: zstd
