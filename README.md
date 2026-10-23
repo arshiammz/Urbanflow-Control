@@ -156,7 +156,7 @@ rolling_mean_672
 
 Rolling features are shifted before calculation so the current target value cannot leak into its own prediction.
 
-![Feature Engineering and Evaluation](docs/images/forecasting_feature_engineering_flowchart.png)
+![Feature Engineering and Evaluation](docs/images/orecasting_feature_engineering_flowchart.png)
 
 Additional features include:
 
