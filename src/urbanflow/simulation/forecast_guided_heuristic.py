@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import math
 from dataclasses import dataclass
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -12,6 +12,7 @@ import polars as pl
 import yaml
 from numpy.typing import NDArray
 
+from urbanflow.simulation.decision_time_forecasting import fit_train_only_projector
 from urbanflow.simulation.fleet_simulator import (
     FleetSimulator,
     FleetSnapshot,
@@ -318,391 +319,90 @@ def load_forecast_matrix(
     baseline_config: RealEpisodeBaselineConfig,
     zone_ids: tuple[int, ...],
     episode_timestamps: list[datetime],
-) -> tuple[
-    list[datetime],
-    FloatMatrix,
-]:
-    """Load a dense forecast matrix for episode and horizon."""
-    if not episode_timestamps:
-        raise ForecastGuidedPolicyError(
-            "Episode timestamps must not be empty."
-        )
+    expected_split: str = "validation",
+) -> tuple[list[datetime], FloatMatrix]:
+    """Load exactly one ex-ante forecast per evaluated interval/zone.
 
-    interval_delta = timedelta(
-        minutes=baseline_config.interval_minutes
-    )
-
-    future_timestamps = [
-        episode_timestamps[-1]
-        + interval_delta * offset
-        for offset in range(
-            1,
-            config.forecast_horizon_steps + 1,
-        )
-    ]
-
-    expected_timestamps = [
-        *episode_timestamps,
-        *future_timestamps,
-    ]
-
-    expected_timestamp_count = len(
-        expected_timestamps
-    )
-
-    first_timestamp = expected_timestamps[0]
-    last_required_timestamp = (
-        expected_timestamps[-1]
-    )
+    An offline forecast for t+1 is NOT an as-of forecast for decision t;
+    it may contain lags computed from realized demand at t. Future offline
+    forecast rows are never loaded. The train-only as-of projector supplies
+    horizon estimates instead.
+    """
+    if not episode_timestamps or not zone_ids:
+        raise ForecastGuidedPolicyError("Forecast timestamps/zones must not be empty.")
+    if len(set(episode_timestamps)) != len(episode_timestamps):
+        raise ForecastGuidedPolicyError("Episode timestamps must be unique.")
+    if not expected_split:
+        raise ForecastGuidedPolicyError("expected_split must be provided.")
 
     try:
-        frame = pl.read_parquet(
-            config.forecast_predictions_path
-        )
-
+        frame = pl.scan_parquet(config.forecast_predictions_path)
     except Exception as error:
         raise ForecastGuidedPolicyError(
             f"Could not read forecast predictions: {error}"
         ) from error
-
-    required_columns = {
+    required = {
         config.forecast_timestamp_column,
         config.forecast_zone_column,
         config.forecast_prediction_column,
         config.forecast_split_column,
     }
+    missing = sorted(required - set(frame.columns))
+    if missing:
+        raise ForecastGuidedPolicyError(f"Forecast file lacks columns: {missing}")
 
-    missing_columns = sorted(
-        required_columns.difference(
-            frame.columns
-        )
-    )
-
-    if missing_columns:
-        raise ForecastGuidedPolicyError(
-            "Forecast predictions are missing columns: "
-            + ", ".join(
-                missing_columns
-            )
-        )
-
-    frame = (
-        frame.select(
-            pl.col(
-                config.forecast_timestamp_column
-            ).alias(
-                "interval_start"
-            ),
-            pl.col(
-                config.forecast_zone_column
-            )
-            .cast(
-                pl.Int64
-            )
-            .alias(
-                "zone_id"
-            ),
-            pl.col(
-                config.forecast_prediction_column
-            )
-            .cast(
-                pl.Float64
-            )
-            .alias(
-                "forecast_demand"
-            ),
-            pl.col(
-                config.forecast_split_column
-            )
-            .cast(
-                pl.String
-            )
-            .alias(
-                "split"
-            ),
-        )
-        .filter(
-            pl.col(
-                "zone_id"
-            ).is_in(
-                list(
-                    zone_ids
-                )
-            )
-        )
-        .filter(
-            pl.col(
-                "interval_start"
-            )
-            >= first_timestamp
-        )
-        .filter(
-            pl.col(
-                "interval_start"
-            )
-            <= last_required_timestamp
-        )
-    )
-
+    frame = frame.select(
+        pl.col(config.forecast_timestamp_column).alias("interval_start"),
+        pl.col(config.forecast_zone_column).cast(pl.Int64).alias("zone_id"),
+        pl.col(config.forecast_prediction_column).cast(pl.Float64).alias("forecast"),
+        pl.col(config.forecast_split_column).cast(pl.String).alias("split"),
+    ).filter(
+        pl.col("interval_start").is_between(
+            min(episode_timestamps), max(episode_timestamps), closed="both"
+        ) & pl.col("zone_id").is_in(list(zone_ids))
+    ).collect()
     if frame.height == 0:
+        raise ForecastGuidedPolicyError("No forecasts for this evaluation window.")
+    if frame.filter(pl.col("split") != expected_split).height:
         raise ForecastGuidedPolicyError(
-            "No forecasts were found for the episode range."
+            "Forecast rows from a different temporal split were found."
         )
+    if frame.group_by("interval_start", "zone_id").len().filter(pl.col("len") > 1).height:
+        raise ForecastGuidedPolicyError("Duplicate forecast interval-zone keys.")
 
-    null_count = sum(
-        int(value)
-        for value in frame.null_count().row(0)
-    )
-
-    if null_count:
-        raise ForecastGuidedPolicyError(
-            "Forecast dataset contains null values."
-        )
-
-    invalid_prediction_count = (
-        frame.filter(
-            ~pl.col(
-                "forecast_demand"
-            ).is_finite()
-            | (
-                pl.col(
-                    "forecast_demand"
-                )
-                < 0
-            )
-        )
-        .height
-    )
-
-    if invalid_prediction_count:
-        raise ForecastGuidedPolicyError(
-            "Forecasts contain invalid predictions."
-        )
-
-    duplicate_count = (
-        frame.group_by(
-            "interval_start",
-            "zone_id",
-        )
-        .agg(
-            pl.len().alias(
-                "row_count"
-            )
-        )
-        .filter(
-            pl.col(
-                "row_count"
-            )
-            > 1
-        )
-        .height
-    )
-
-    if duplicate_count:
-        raise ForecastGuidedPolicyError(
-            "Forecast dataset contains duplicate keys."
-        )
-
-    zone_order = pl.DataFrame(
-        {
-            "zone_id": list(
-                zone_ids
-            ),
-            "zone_index": list(
-                range(
-                    len(
-                        zone_ids
-                    )
-                )
-            ),
-        },
-        schema={
-            "zone_id": pl.Int64,
-            "zone_index": pl.Int64,
-        },
-    )
-
-    timestamp_dtype = frame.schema[
-        "interval_start"
-    ]
-
-    timestamp_index = pl.DataFrame(
-        {
-            "interval_start": pl.Series(
-                name="interval_start",
-                values=expected_timestamps,
-                dtype=timestamp_dtype,
-            ),
-            "forecast_step": pl.Series(
-                name="forecast_step",
-                values=list(
-                    range(
-                        expected_timestamp_count
-                    )
-                ),
-                dtype=pl.Int64,
-            ),
-        }
-    )
-
-    expected_grid = (
-        timestamp_index.join(
-            zone_order,
-            how="cross",
-        )
-        .sort(
-            "forecast_step",
-            "zone_index",
-        )
-    )
-
-    selected = (
-        expected_grid.join(
-            frame,
-            on=[
-                "interval_start",
-                "zone_id",
-            ],
-            how="left",
-        )
-        .sort(
-            "forecast_step",
-            "zone_index",
-        )
-    )
-
-    expected_rows = (
-        expected_timestamp_count
-        * len(
-            zone_ids
-        )
-    )
-
-    if selected.height != expected_rows:
-        raise ForecastGuidedPolicyError(
-            "Expected forecast grid construction failed: "
-            f"expected={expected_rows}, "
-            f"observed={selected.height}."
-        )
-
-    missing_forecast_count = (
-        selected.get_column(
-            "forecast_demand"
-        )
-        .null_count()
-    )
-
-    if missing_forecast_count:
-        missing_examples = (
-            selected.filter(
-                pl.col(
-                    "forecast_demand"
-                ).is_null()
-            )
-            .select(
-                "interval_start",
-                "zone_id",
-                "zone_index",
-            )
-            .head(
-                10
-            )
-            .to_dicts()
-        )
-
-        raise ForecastGuidedPolicyError(
-            "Forecast matrix contains missing interval-zone rows: "
-            f"missing={missing_forecast_count}, "
-            f"examples={missing_examples}."
-        )
-
-    observed_timestamps = (
-        selected.select(
-            "interval_start"
-        )
-        .unique()
-        .sort(
-            "interval_start"
-        )
-        .get_column(
-            "interval_start"
-        )
-        .to_list()
-    )
-
-    if observed_timestamps != expected_timestamps:
-        raise ForecastGuidedPolicyError(
-            "Forecast timestamps do not match the "
-            "expected episode and horizon."
-        )
-
-    expected_zone_indices = np.tile(
-        np.arange(
-            len(
-                zone_ids
-            ),
-            dtype=np.int64,
+    # Explicit expected grid catches any missing interval-zone key.
+    timestamp_dtype = frame.schema["interval_start"]
+    if not isinstance(timestamp_dtype, pl.Datetime) or timestamp_dtype.time_zone != baseline_config.timezone:
+        raise ForecastGuidedPolicyError("Forecast timestamp column is not datetime.")
+    timeline = pl.DataFrame({
+        "interval_start": pl.Series(
+            "interval_start", episode_timestamps, dtype=timestamp_dtype
         ),
-        expected_timestamp_count,
+        "forecast_step": pl.Series("forecast_step", list(range(len(episode_timestamps))), dtype=pl.Int64),
+    })
+    zones = pl.DataFrame({
+        "zone_id": pl.Series("zone_id", list(zone_ids), dtype=pl.Int64),
+        "zone_index": pl.Series("zone_index", list(range(len(zone_ids))), dtype=pl.Int64),
+    })
+    expected = timeline.join(zones, how="cross")
+    result = expected.join(frame, on=["interval_start", "zone_id"], how="left").sort(
+        "forecast_step", "zone_index"
     )
-
-    observed_zone_indices = (
-        selected.get_column(
-            "zone_index"
-        )
-        .to_numpy()
-        .astype(
-            np.int64,
-            copy=False,
-        )
-    )
-
-    if not np.array_equal(
-        expected_zone_indices,
-        observed_zone_indices,
-    ):
-        raise ForecastGuidedPolicyError(
-            "Forecast zone ordering is invalid."
-        )
-
-    matrix = (
-        selected.get_column(
-            "forecast_demand"
-        )
-        .to_numpy()
-        .reshape(
-            expected_timestamp_count,
-            len(
-                zone_ids
-            ),
-        )
-        .astype(
-            np.float64,
-            copy=False,
-        )
-    )
-
-    if not np.isfinite(
-        matrix
-    ).all():
-        raise ForecastGuidedPolicyError(
-            "Final forecast matrix contains "
-            "non-finite values."
-        )
-
-    if (
-        matrix
-        < 0
-    ).any():
-        raise ForecastGuidedPolicyError(
-            "Final forecast matrix contains "
-            "negative values."
-        )
-
-    return (
-        expected_timestamps,
-        matrix,
-    )
+    if result.height != len(episode_timestamps) * len(zone_ids):
+        raise ForecastGuidedPolicyError("Forecast grid has the wrong row count.")
+    if result.get_column("forecast").null_count():
+        examples = result.filter(pl.col("forecast").is_null()).select(
+            "interval_start", "zone_id"
+        ).head(5).to_dicts()
+        raise ForecastGuidedPolicyError(f"Missing forecasts for: {examples}")
+    if result.get_column("split").null_count():
+        raise ForecastGuidedPolicyError("Missing split labels in forecast grid.")
+    matrix = result.get_column("forecast").to_numpy().reshape(
+        len(episode_timestamps), len(zone_ids)
+    ).astype(np.float64)
+    if not np.isfinite(matrix).all() or (matrix < 0).any():
+        raise ForecastGuidedPolicyError("Forecast matrix contains invalid values.")
+    return episode_timestamps, matrix
 
 
 def build_forecast_target(
@@ -1283,6 +983,14 @@ def run_forecast_guided_comparison(
         baseline_config=baseline_config,
         zone_ids=zone_ids,
         episode_timestamps=episode_timestamps,
+        expected_split=baseline_config.evaluation_split,
+    )
+
+    projector = fit_train_only_projector(
+        historical_demand,
+        zone_ids=zone_ids,
+        interval_minutes=baseline_config.interval_minutes,
+        training_split=baseline_config.sizing_split,
     )
 
     if (
@@ -1356,29 +1064,11 @@ def run_forecast_guided_comparison(
             step_index
         ]
 
-        future_start = (
-            step_index
-            + 1
+        future_forecasts = projector.project(
+            decision_time=timestamp,
+            current_prediction=current_forecast,
+            horizon_steps=config.forecast_horizon_steps,
         )
-
-        future_end = (
-            future_start
-            + config.forecast_horizon_steps
-        )
-
-        future_forecasts = forecast_matrix[
-            future_start:future_end
-        ]
-
-        if (
-            apply_policy
-            and future_forecasts.shape[0]
-            != config.forecast_horizon_steps
-        ):
-            raise ForecastGuidedPolicyError(
-                "Forecast horizon is incomplete "
-                f"at step {step_index}."
-            )
 
         if apply_policy:
             decision = greedy_relocation_action(
@@ -1942,6 +1632,13 @@ def run_forecast_guided_comparison(
             "reserve_multiplier": (
                 fleet_sizing.reserve_multiplier
             ),
+        },
+        "forecast_availability": {
+            "method": projector.method,
+            "only_current_interval_offline_forecast_loaded": True,
+            "seasonal_profile_fitted_on_split": baseline_config.sizing_split,
+            "future_realized_demand_in_policy": False,
+            "future_offline_predictions_in_policy": False,
         },
         "policy": {
             "name": config.policy_name,

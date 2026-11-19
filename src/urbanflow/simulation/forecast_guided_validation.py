@@ -11,6 +11,7 @@ import polars as pl
 import yaml
 from numpy.typing import NDArray
 
+from urbanflow.simulation.decision_time_forecasting import fit_train_only_projector
 from urbanflow.simulation.forecast_guided_heuristic import (
     ForecastGuidedConfig,
     build_simulator,
@@ -1200,6 +1201,14 @@ def run_forecast_guided_validation(
         baseline_config=baseline_config,
         zone_ids=zone_ids,
         episode_timestamps=episode_timestamps,
+        expected_split=config.validation_split,
+    )
+
+    projector = fit_train_only_projector(
+        historical_demand,
+        zone_ids=zone_ids,
+        interval_minutes=baseline_config.interval_minutes,
+        training_split=baseline_config.sizing_split,
     )
 
     if (
@@ -1214,24 +1223,13 @@ def run_forecast_guided_validation(
             "Forecast and demand timestamps do not align."
         )
 
-    last_required_timestamp = (
-        episode_timestamps[-1]
-        + timedelta(
-            minutes=(
-                baseline_config.interval_minutes
-                * heuristic_config.forecast_horizon_steps
-            )
-        )
-    )
-
-    forecast_split_validation = (
-        validate_forecast_split_window(
-            config=config,
-            heuristic_config=heuristic_config,
-            zone_ids=zone_ids,
-            first_timestamp=episode_timestamps[0],
-            last_required_timestamp=last_required_timestamp,
-        )
+    last_required_timestamp = episode_timestamps[-1]
+    forecast_split_validation = validate_forecast_split_window(
+        config=config,
+        heuristic_config=heuristic_config,
+        zone_ids=zone_ids,
+        first_timestamp=episode_timestamps[0],
+        last_required_timestamp=last_required_timestamp,
     )
 
     baseline_simulator = build_simulator(
@@ -1286,28 +1284,11 @@ def run_forecast_guided_validation(
         )
 
         if is_evaluation:
-            future_start = (
-                step_index
-                + 1
+            future_forecasts = projector.project(
+                decision_time=timestamp,
+                current_prediction=forecast_matrix[step_index],
+                horizon_steps=heuristic_config.forecast_horizon_steps,
             )
-
-            future_end = (
-                future_start
-                + heuristic_config.forecast_horizon_steps
-            )
-
-            future_forecasts = forecast_matrix[
-                future_start:future_end
-            ]
-
-            if (
-                future_forecasts.shape[0]
-                != heuristic_config.forecast_horizon_steps
-            ):
-                raise ForecastGuidedValidationError(
-                    "Forecast horizon is incomplete at "
-                    f"step {step_index}."
-                )
 
             decision = greedy_relocation_action(
                 snapshot=policy_simulator.snapshot(),
@@ -1679,6 +1660,8 @@ def run_forecast_guided_validation(
             not heuristic_config.apply_during_warmup
         ),
         "fleet_sizing_uses_training_split_only": True,
+        "future_predictions_not_read": True,
+        "future_demand_not_used_for_actions": True,
     }
 
     if not all(
@@ -1736,6 +1719,10 @@ def run_forecast_guided_validation(
             "warmup_policy": "no_rebalancing",
             "validation_predictions_only": True,
             "test_predictions_used": False,
+            "asof_method": projector.method,
+            "future_offline_predictions_used": False,
+            "future_realized_demand_used_in_decisions": False,
+            "seasonal_profile_fitted_on_split": baseline_config.sizing_split,
         },
         "validation_window": {
             "split": config.validation_split,

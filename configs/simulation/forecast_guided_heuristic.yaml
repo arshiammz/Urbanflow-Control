@@ -4,7 +4,7 @@ dataset:
 paths:
   baseline_config: configs/simulation/real_episode_baseline.yaml
 
-  forecast_predictions: data/processed/full/xgboost_constrained_predictions_15m_2024-01_2024-06.parquet
+  forecast_predictions: data/processed/simulation/nyc_2024-01_2024-06/asof_validation_predictions.parquet
 
   step_metrics: reports/simulation/forecast_guided_heuristic/2024-05-15-step-metrics.parquet
 
@@ -17,7 +17,7 @@ paths:
 forecast:
   timestamp_column: interval_start
   zone_column: zone_id
-  prediction_column: constrained_prediction
+  prediction_column: asof_prediction
   split_column: split
 
 policy:

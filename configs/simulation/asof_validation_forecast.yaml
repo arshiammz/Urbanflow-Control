@@ -1,0 +1,15 @@
+# No May label is allowed to influence the model used to forecast May.
+paths:
+  xgboost_config: configs/forecasting/xgboost.yaml
+  predictions: data/processed/simulation/nyc_2024-01_2024-06/asof_validation_predictions.parquet
+  model: artifacts/models/xgboost-asof-may/model.ubj
+  metadata: reports/simulation/asof-validation-forecast-metadata.json
+
+chronology:
+  internal_selection_train_end_exclusive: '2024-04-01'
+  internal_selection_validation_end_exclusive: '2024-05-01'
+  forecasting_start: '2024-05-01'
+  forecasting_end_exclusive: '2024-06-01'
+
+output:
+  compression: zstd

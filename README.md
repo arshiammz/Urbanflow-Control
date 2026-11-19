@@ -9,6 +9,13 @@ The project starts with more than **120 million NYC High Volume For-Hire Vehicle
 > The goal is not only to predict demand.  
 > The goal is to use predictions to make better operational decisions.
 
+> **Evaluation notice (Phase 1 correction):** Earlier May simulation results in
+> this README used future offline one-step forecasts and May-calibrated
+> predictions in a multi-step policy. They are **legacy preliminary numbers**,
+> not causal decision-time evidence. Use `docs/evaluation-protocol.md` and run
+> `scripts/build_asof_validation_forecasts.py`, then May validation/tuning and
+> frozen replay before replacing those figures with leakage-corrected results.
+
 ---
 
 ## Project at a Glance
@@ -414,7 +421,7 @@ Important constraints include:
 
 ---
 
-# 12. One-Day Operational Result
+# 12. One-Day Operational Result (Legacy, Must Re-evaluate)
 
 On May 15:
 
@@ -438,7 +445,7 @@ This was only an initial validation episode, so the policy was subsequently eval
 
 ---
 
-# 13. Continuous Multi-Day Validation
+# 13. Continuous Multi-Day Validation (Legacy, Must Re-evaluate)
 
 The forecast-guided heuristic was evaluated continuously from:
 
