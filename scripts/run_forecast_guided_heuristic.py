@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 from pathlib import Path
 
 from urbanflow.simulation.fleet_simulator import (
@@ -14,17 +15,19 @@ from urbanflow.simulation.real_episode_baseline import (
 )
 
 
-CONFIG_PATH = Path(
-    "configs/simulation/"
-    "forecast_guided_heuristic.yaml"
+DEFAULT_CONFIG_PATH = Path(
+    "configs/simulation/forecast_guided_heuristic.yaml"
 )
 
 
 def main() -> None:
     """Run forecast-guided rebalancing comparison."""
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG_PATH)
+    args = parser.parse_args()
     try:
         report = run_forecast_guided_comparison(
-            CONFIG_PATH
+            args.config
         )
 
     except (

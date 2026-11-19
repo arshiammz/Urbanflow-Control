@@ -383,7 +383,7 @@ def run_forecast_guided_tuning(
     timestamps, actual = extract_continuous_window(
         demand, config=config, baseline_config=baseline_config, zone_count=len(zone_ids)
     )
-    loaded_timestamps, forecasts = load_forecast_matrix(
+    loaded_timestamps, forecasts, _ = load_forecast_matrix(
         config=reference,
         baseline_config=baseline_config,
         zone_ids=zone_ids,

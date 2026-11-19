@@ -1,0 +1,82 @@
+paths:
+  input: data/processed/full/spatiotemporal_features_15m_2024-01_2024-06.parquet
+  model_directory: artifacts/models/urbanflow-quantile-graph-weather
+  metadata: artifacts/models/urbanflow-quantile-graph-weather/metadata.json
+  predictions: data/processed/full/quantile_graph_weather_predictions_15m_2024-01_2024-06.parquet
+  report: reports/forecasting/2024-01_2024-06-quantile-graph-weather-metrics.json
+
+schema:
+  target_column: target_pickup_count
+  split_column: split
+  key_columns: [interval_start, zone_id]
+  categorical_columns: [zone_id, borough, service_zone]
+  feature_columns:
+    - zone_id
+    - borough
+    - service_zone
+    - day_of_week
+    - hour
+    - minute
+    - minute_of_day
+    - is_weekend
+    - time_of_day_sin
+    - time_of_day_cos
+    - day_of_week_sin
+    - day_of_week_cos
+    - pickup_count_lag_1
+    - pickup_count_lag_2
+    - pickup_count_lag_4
+    - pickup_count_lag_8
+    - pickup_count_lag_96
+    - pickup_count_lag_192
+    - pickup_count_lag_672
+    - pickup_count_rolling_mean_4
+    - pickup_count_rolling_std_4
+    - pickup_count_rolling_mean_8
+    - pickup_count_rolling_std_8
+    - pickup_count_rolling_mean_96
+    - pickup_count_rolling_std_96
+    - pickup_count_rolling_mean_672
+    - pickup_count_rolling_std_672
+    - graph_neighbor_lag_1
+    - graph_neighbor_lag_4
+    - graph_neighbor_rolling_mean_4
+    - graph_neighbor_count
+    - zone_latitude
+    - zone_longitude
+    - weather_temperature_2m
+    - weather_relative_humidity_2m
+    - weather_precipitation_probability
+    - weather_precipitation
+    - weather_wind_speed_10m
+    - weather_code
+    - weather_forecast_lead_hours
+    - weather_forecast_age_hours
+    - weather_missing
+
+chronology:
+  train_start: "2024-01-08"
+  selection_train_end_exclusive: "2024-04-01"
+  selection_validation_start: "2024-04-01"
+  selection_validation_end_exclusive: "2024-05-01"
+  prediction_start: "2024-05-01"
+  prediction_end_exclusive: "2024-07-01"
+
+model:
+  estimator_candidates: [300, 500, 800]
+  learning_rate: 0.05
+  max_depth: 8
+  min_child_weight: 20.0
+  subsample: 0.8
+  colsample_bytree: 0.9
+  reg_lambda: 2.0
+  max_bin: 256
+  max_cat_to_onehot: 4
+  max_cat_threshold: 64
+  random_state: 42
+  n_jobs: -1
+  verbosity: 1
+  minimum_prediction: 0.0
+
+output:
+  compression: zstd

@@ -50,7 +50,7 @@ class SimulationInputConfig:
     test_start: date
     test_end_exclusive: date
 
-    top_n_zones: int
+    top_n_zones: int | None
     minimum_fit_pickups: int
 
     minimum_trip_minutes: float
@@ -202,8 +202,10 @@ def read_config(
                 periods["test_end_exclusive"],
                 description="test_end_exclusive",
             ),
-            top_n_zones=int(
-                zone_selection["top_n_zones"]
+            top_n_zones=(
+                None
+                if zone_selection.get("top_n_zones") is None
+                else int(zone_selection["top_n_zones"])
             ),
             minimum_fit_pickups=int(
                 zone_selection["minimum_fit_pickups"]
@@ -276,9 +278,9 @@ def validate_config(
             f"Demand dataset is empty: {config.demand_path}"
         )
 
-    if config.top_n_zones <= 1:
+    if config.top_n_zones is not None and config.top_n_zones <= 1:
         raise SimulationInputError(
-            "top_n_zones must be greater than one."
+            "top_n_zones must be null (all eligible zones) or greater than one."
         )
 
     if config.minimum_fit_pickups < 0:
@@ -652,55 +654,37 @@ def select_zones(
     """Select the highest-volume zones using fit-period demand only."""
     selected = (
         demand.filter(
-            pl.col(
-                "service_date"
-            )
-            >= config.od_fit_start
+            pl.col("service_date") >= config.od_fit_start
         )
         .filter(
-            pl.col(
-                "service_date"
-            )
-            < config.od_fit_end_exclusive
+            pl.col("service_date") < config.od_fit_end_exclusive
         )
-        .group_by(
-            "zone_id"
-        )
+        .group_by("zone_id")
         .agg(
-            pl.col(
-                "actual_demand"
-            )
+            pl.col("actual_demand")
             .sum()
-            .alias(
-                "fit_pickup_count"
-            )
+            .alias("fit_pickup_count")
         )
         .filter(
-            pl.col(
-                "fit_pickup_count"
-            )
-            >= config.minimum_fit_pickups
+            pl.col("fit_pickup_count") >= config.minimum_fit_pickups
         )
         .sort(
-            [
-                "fit_pickup_count",
-                "zone_id",
-            ],
-            descending=[
-                True,
-                False,
-            ],
-        )
-        .head(
-            config.top_n_zones
+            ["fit_pickup_count", "zone_id"],
+            descending=[True, False],
         )
     )
 
-    if selected.height != config.top_n_zones:
+    if config.top_n_zones is not None:
+        selected = selected.head(config.top_n_zones)
+
+    if selected.height < 2:
+        raise SimulationInputError(
+            "At least two zones must meet the fit-period eligibility threshold."
+        )
+    if config.top_n_zones is not None and selected.height != config.top_n_zones:
         raise SimulationInputError(
             "Could not select the requested number of zones. "
-            f"Requested={config.top_n_zones}, "
-            f"eligible={selected.height}."
+            f"Requested={config.top_n_zones}, eligible={selected.height}."
         )
 
     total_fit_pickups = int(
@@ -1536,6 +1520,12 @@ def build_real_simulation_inputs(
         },
         "zones": {
             "selected_zone_count": zones.height,
+            "selection_mode": (
+                "all_fit_eligible_zones"
+                if config.top_n_zones is None
+                else "top_n_fit_eligible_zones"
+            ),
+            "configured_top_n_zones": config.top_n_zones,
             "minimum_fit_pickups": (
                 config.minimum_fit_pickups
             ),
@@ -1561,8 +1551,14 @@ def build_real_simulation_inputs(
         "artifacts": artifacts,
         "invariants": {
             "zone_count_matches_config": (
-                zones.height
-                == config.top_n_zones
+                zones.height >= 2
+                and (
+                    config.top_n_zones is None
+                    or zones.height == config.top_n_zones
+                )
+            ),
+            "all_fit_eligible_zones_included": (
+                config.top_n_zones is None
             ),
             "od_matrix_is_complete": (
                 od_profile.height

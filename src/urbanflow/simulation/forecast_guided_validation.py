@@ -11,6 +11,7 @@ import polars as pl
 import yaml
 from numpy.typing import NDArray
 
+from urbanflow.geo.zone_graph import ZoneGraph
 from urbanflow.simulation.decision_time_forecasting import fit_train_only_projector
 from urbanflow.simulation.forecast_guided_heuristic import (
     ForecastGuidedConfig,
@@ -1196,6 +1197,7 @@ def run_forecast_guided_validation(
     (
         forecast_timestamps,
         forecast_matrix,
+        upper_forecast_matrix,
     ) = load_forecast_matrix(
         config=heuristic_config,
         baseline_config=baseline_config,
@@ -1232,20 +1234,36 @@ def run_forecast_guided_validation(
         last_required_timestamp=last_required_timestamp,
     )
 
+    allowed_relocation_edges = None
+    if heuristic_config.zone_graph_path is not None:
+        try:
+            graph = ZoneGraph.load(heuristic_config.zone_graph_path)
+        except (OSError, ValueError) as error:
+            raise ForecastGuidedValidationError(
+                f"Could not load zone graph: {error}"
+            ) from error
+        if set(graph.zone_ids) != set(zone_ids):
+            raise ForecastGuidedValidationError(
+                "Zone graph IDs do not match the validation network."
+            )
+        graph_positions = [graph.zone_ids.index(zone_id) for zone_id in zone_ids]
+        allowed_relocation_edges = (
+            graph.adjacency[np.ix_(graph_positions, graph_positions)] > 0
+        )
+        np.fill_diagonal(allowed_relocation_edges, False)
+
     baseline_simulator = build_simulator(
         baseline_config=baseline_config,
         network=network,
-        initial_vehicles=(
-            fleet_sizing.initial_vehicles
-        ),
+        initial_vehicles=fleet_sizing.initial_vehicles,
+        allowed_relocation_edges=allowed_relocation_edges,
     )
 
     policy_simulator = build_simulator(
         baseline_config=baseline_config,
         network=network,
-        initial_vehicles=(
-            fleet_sizing.initial_vehicles
-        ),
+        initial_vehicles=fleet_sizing.initial_vehicles,
+        allowed_relocation_edges=allowed_relocation_edges,
     )
 
     zero_action = np.zeros(
@@ -1266,6 +1284,7 @@ def run_forecast_guided_validation(
 
     baseline_fleet_conserved = True
     policy_fleet_conserved = True
+    policy_graph_feasibility_passed = True
 
     for step_index, (
         timestamp,
@@ -1284,27 +1303,35 @@ def run_forecast_guided_validation(
         )
 
         if is_evaluation:
+            current_forecast = forecast_matrix[step_index]
+            if upper_forecast_matrix is not None:
+                current_forecast = (
+                    (1.0 - heuristic_config.risk_aversion) * current_forecast
+                    + heuristic_config.risk_aversion * upper_forecast_matrix[step_index]
+                )
             future_forecasts = projector.project(
                 decision_time=timestamp,
-                current_prediction=forecast_matrix[step_index],
+                current_prediction=current_forecast,
                 horizon_steps=heuristic_config.forecast_horizon_steps,
             )
 
             decision = greedy_relocation_action(
                 snapshot=policy_simulator.snapshot(),
-                current_forecast=forecast_matrix[
-                    step_index
-                ],
+                current_forecast=current_forecast,
                 future_forecasts=future_forecasts,
-                relocation_travel_steps=(
-                    relocation_travel_steps
-                ),
+                relocation_travel_steps=relocation_travel_steps,
                 config=heuristic_config,
+                allowed_relocation_edges=allowed_relocation_edges,
             )
 
-            policy_action = (
-                decision.relocation_action
-            )
+            policy_action = decision.relocation_action
+            if allowed_relocation_edges is not None:
+                policy_graph_feasibility_passed = (
+                    policy_graph_feasibility_passed
+                    and not bool(
+                        ((policy_action > 0) & ~allowed_relocation_edges).any()
+                    )
+                )
 
         else:
             policy_action = zero_action
@@ -1662,6 +1689,7 @@ def run_forecast_guided_validation(
         "fleet_sizing_uses_training_split_only": True,
         "future_predictions_not_read": True,
         "future_demand_not_used_for_actions": True,
+        "relocation_actions_respect_zone_graph": policy_graph_feasibility_passed,
     }
 
     if not all(
@@ -1765,6 +1793,10 @@ def run_forecast_guided_validation(
         },
         "policy": {
             "name": heuristic_config.policy_name,
+            "forecast_central_column": heuristic_config.forecast_prediction_column,
+            "forecast_upper_column": heuristic_config.forecast_upper_prediction_column,
+            "risk_aversion": heuristic_config.risk_aversion,
+            "zone_graph_constraints_enabled": allowed_relocation_edges is not None,
             "forecast_horizon_steps": (
                 heuristic_config.forecast_horizon_steps
             ),

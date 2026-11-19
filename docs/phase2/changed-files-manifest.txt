@@ -1,0 +1,37 @@
+Phase 2 added files
+-------------------
+src/urbanflow/geo/__init__.py
+src/urbanflow/geo/zone_graph.py
+src/urbanflow/data/weather_ingestion.py
+src/urbanflow/forecasting/probabilistic_forecaster.py
+scripts/build_zone_centroids.py
+scripts/build_zone_graph.py
+scripts/fetch_weather_forecast_archive.py
+scripts/build_spatiotemporal_features.py
+scripts/train_probabilistic_forecaster.py
+scripts/build_decision_time_quantile_forecasts.py
+configs/simulation/real_data_inputs_all_zones.yaml
+configs/simulation/real_episode_baseline_all_zones.yaml
+configs/simulation/forecast_guided_heuristic_all_zones.yaml
+configs/simulation/forecast_guided_validation_all_zones.yaml
+configs/weather/open_meteo_asof.yaml
+configs/forecasting/spatiotemporal_features.yaml
+configs/forecasting/probabilistic_graph_weather.yaml
+configs/forecasting/decision_time_quantile_horizon.yaml
+docs/phase2/README.md
+docs/phase2/IMPLEMENTATION_STATUS.md
+tests/unit/geo/test_zone_graph.py
+tests/unit/forecasting/test_probabilistic_forecaster.py
+
+Phase 2 modified files
+----------------------
+README.md
+pyproject.toml
+scripts/build_real_simulation_inputs.py
+scripts/run_forecast_guided_heuristic.py
+src/urbanflow/simulation/real_data_inputs.py
+src/urbanflow/simulation/fleet_simulator.py
+src/urbanflow/simulation/forecast_guided_heuristic.py
+src/urbanflow/simulation/forecast_guided_validation.py
+tests/unit/simulation/test_fleet_simulator.py
+tests/unit/simulation/test_forecast_selection_contract.py

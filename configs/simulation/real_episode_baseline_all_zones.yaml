@@ -1,0 +1,35 @@
+dataset:
+  name: nyc_hvfhv_all_eligible_zones_episode_baseline
+  timezone: America/New_York
+  interval_minutes: 15
+
+paths:
+  zone_index: data/processed/simulation/nyc_2024-01_2024-06_all_zones/zone_index.parquet
+  od_profile: data/processed/simulation/nyc_2024-01_2024-06_all_zones/od_profile.parquet
+  historical_demand: data/processed/simulation/nyc_2024-01_2024-06_all_zones/historical_demand.parquet
+  step_metrics: reports/simulation/all_zones_baseline/2024-05-15-step-metrics.parquet
+  interval_zone_metrics: reports/simulation/all_zones_baseline/2024-05-15-interval-zone-metrics.parquet
+  zone_summary: reports/simulation/all_zones_baseline/2024-05-15-zone-summary.parquet
+  report: reports/simulation/2024-05-15-all-zones-no-rebalancing-baseline.json
+
+episode:
+  evaluation_split: validation
+  service_date: "2024-05-15"
+  warmup_days: 1
+
+fleet:
+  sizing_split: train
+  reserve_multiplier: 1.20
+  minimum_vehicles_per_zone: 1
+  initial_distribution_column: fit_pickup_share
+
+costs:
+  unmet_demand_penalty: 10.0
+  relocation_cost_per_vehicle_step: 0.5
+  idle_vehicle_cost: 0.01
+
+policy:
+  name: no_rebalancing
+
+output:
+  compression: zstd

@@ -1,0 +1,17 @@
+paths:
+  input: data/processed/full/forecast_features_15m_2024-01_2024-06.parquet
+  weather_archive: data/processed/weather/nyc_2024-03-14_2024-06-30_asof.parquet
+  zone_index: data/processed/simulation/nyc_2024-01_2024-06_all_zones/zone_index.parquet
+  zone_graph: data/processed/spatial/nyc_taxi_zone_graph_all_eligible.json
+  output: data/processed/full/spatiotemporal_features_15m_2024-01_2024-06.parquet
+  report: reports/data_quality/2024-01_2024-06-spatiotemporal-features.json
+
+features:
+  interval_minutes: 15
+  graph_source_columns:
+    - pickup_count_lag_1
+    - pickup_count_lag_4
+    - pickup_count_rolling_mean_4
+
+output:
+  compression: zstd

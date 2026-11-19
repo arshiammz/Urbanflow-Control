@@ -652,3 +652,27 @@ def test_summary_aggregates_completed_steps() -> None:
         )
         == simulator.total_fleet
     )
+
+def test_rejects_relocation_across_non_adjacent_zone() -> None:
+    simulator = FleetSimulator(
+        zone_ids=(101, 102, 103),
+        initial_vehicles=[5, 3, 2],
+        passenger_destination_probabilities=[
+            [0.0, 0.5, 0.5], [0.5, 0.0, 0.5], [0.5, 0.5, 0.0]
+        ],
+        relocation_travel_steps=[[0, 1, 2], [1, 0, 1], [2, 1, 0]],
+        passenger_travel_steps=[[1, 1, 2], [1, 1, 1], [2, 1, 1]],
+        allowed_relocation_edges=[
+            [False, True, False], [True, False, True], [False, True, False]
+        ],
+        costs=SimulationCosts(
+            unmet_demand_penalty=10.0,
+            relocation_cost_per_vehicle_step=0.5,
+            idle_vehicle_cost=0.1,
+        ),
+    )
+    with pytest.raises(FleetSimulationError, match="adjacency constraints"):
+        simulator.step(
+            demand=[0, 0, 0],
+            relocation_action=[[0, 0, 1], [0, 0, 0], [0, 0, 0]],
+        )

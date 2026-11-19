@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 from pathlib import Path
 
 from urbanflow.simulation.real_data_inputs import (
@@ -8,16 +9,19 @@ from urbanflow.simulation.real_data_inputs import (
 )
 
 
-CONFIG_PATH = Path(
-    "configs/simulation/real_data_inputs.yaml"
+DEFAULT_CONFIG_PATH = Path(
+    "configs/simulation/real_data_inputs_all_zones.yaml"
 )
 
 
 def main() -> None:
     """Build leakage-safe real-data simulation inputs."""
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG_PATH)
+    args = parser.parse_args()
     try:
         metadata = build_real_simulation_inputs(
-            CONFIG_PATH
+            args.config
         )
 
     except SimulationInputError as error:

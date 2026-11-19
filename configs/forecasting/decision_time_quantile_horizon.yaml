@@ -1,0 +1,13 @@
+paths:
+  predictions: data/processed/full/quantile_graph_weather_predictions_15m_2024-01_2024-06.parquet
+  historical_demand: data/processed/simulation/nyc_2024-01_2024-06_all_zones/historical_demand.parquet
+  zone_index: data/processed/simulation/nyc_2024-01_2024-06_all_zones/zone_index.parquet
+  output: data/processed/full/decision_time_quantile_horizon_15m_2024-01_2024-06.parquet
+  report: reports/forecasting/2024-01_2024-06-decision-time-quantile-horizon.json
+
+forecast:
+  interval_minutes: 15
+  horizon_steps: 4
+
+output:
+  compression: zstd

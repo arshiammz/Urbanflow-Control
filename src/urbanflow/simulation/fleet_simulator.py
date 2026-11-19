@@ -399,6 +399,7 @@ class FleetSimulator:
         relocation_travel_steps: Any,
         passenger_travel_steps: Any,
         costs: SimulationCosts,
+        allowed_relocation_edges: Any | None = None,
     ) -> None:
         """Initialize and validate simulator state."""
         if not zone_ids:
@@ -470,6 +471,23 @@ class FleetSimulator:
                 description="Passenger travel steps",
             )
         )
+
+        if allowed_relocation_edges is None:
+            self._allowed_relocation_edges = None
+        else:
+            edge_mask = np.asarray(allowed_relocation_edges, dtype=bool)
+            expected_shape = (self._zone_count, self._zone_count)
+            if edge_mask.shape != expected_shape:
+                raise FleetSimulationError(
+                    "Allowed relocation edges must have shape "
+                    f"{expected_shape}, received {edge_mask.shape}."
+                )
+            if np.diag(edge_mask).any():
+                raise FleetSimulationError("Allowed relocation graph cannot contain self-loops.")
+            if not np.array_equal(edge_mask, edge_mask.T):
+                raise FleetSimulationError("Allowed relocation graph must be symmetric.")
+            edge_mask.setflags(write=False)
+            self._allowed_relocation_edges = edge_mask
 
         self._validate_travel_step_matrices()
 
@@ -822,6 +840,15 @@ class FleetSimulator:
             raise FleetSimulationError(
                 "Relocation-action diagonal must be zero."
             )
+
+        if self._allowed_relocation_edges is not None:
+            forbidden = (relocation_matrix > 0) & ~self._allowed_relocation_edges
+            if forbidden.any():
+                origin, destination = np.argwhere(forbidden)[0]
+                raise FleetSimulationError(
+                    "Relocation action violates zone adjacency constraints: "
+                    f"{self._zone_ids[int(origin)]} -> {self._zone_ids[int(destination)]}."
+                )
 
         arrivals_released = (
             self._arrival_schedule.pop(

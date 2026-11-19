@@ -1,0 +1,26 @@
+api:
+  endpoint: https://single-runs-api.open-meteo.com/v1/forecast
+  # ECMWF IFS HRES runs are archived from 2024-03-14.
+  model: ecmwf_ifs
+  forecast_hours: 18
+  # Conservative global-model dissemination delay: do not expose a run before it is available.
+  availability_delay_hours: 6
+  timeout_seconds: 90
+  request_delay_seconds: 0.20
+  retries: 5
+  allow_missing_runs: true
+
+chronology:
+  start_date: "2024-03-14"
+  end_date_exclusive: "2024-07-01"
+  run_hours_utc: [0, 6, 12, 18]
+  interval_minutes: 15
+  timezone: America/New_York
+
+paths:
+  zone_centroids: data/reference/taxi_zone_centroids.csv
+  weather_archive: data/processed/weather/nyc_2024-03-14_2024-06-30_asof.parquet
+  report: reports/data_quality/nyc-weather-asof-archive.json
+
+output:
+  compression: zstd

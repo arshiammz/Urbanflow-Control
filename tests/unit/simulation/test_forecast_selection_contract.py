@@ -101,7 +101,7 @@ def policy_config(path: Path) -> SimpleNamespace:
 
 def test_loader_does_not_include_future_offline_predictions(tmp_path: Path) -> None:
     path, times = build_forecast_data(tmp_path)
-    actual_times, frame = load_forecast_matrix(
+    actual_times, frame, upper = load_forecast_matrix(
         config=policy_config(path),
         baseline_config=SimpleNamespace(timezone="America/New_York"),
         zone_ids=(101, 102), episode_timestamps=times,
@@ -109,6 +109,7 @@ def test_loader_does_not_include_future_offline_predictions(tmp_path: Path) -> N
     )
     assert actual_times == times
     assert frame.shape == (4, 2)
+    assert upper is None
     assert float(frame.max()) < 100000.0
 
 

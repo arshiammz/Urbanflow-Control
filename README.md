@@ -849,6 +849,28 @@ The project asks:
 
 ---
 
+# Phase 2 — Advanced Spatiotemporal Forecasting
+
+Phase 2 extends the Phase 1 causal forecasting path with: 
+
+- ECMWF IFS weather forecast vintages joined by their real availability time;
+- a geometry-derived taxi-zone k-nearest-neighbour graph and neighbour-lag features;
+- global XGBoost quantile models producing P10/P50/P90 demand;
+- decision-time quantile horizon outputs for downstream optimization/RL;
+- all fit-eligible TLC zones instead of a top-30 simulation subset;
+- graph-constrained relocation actions and configurable P50/P90 risk aversion.
+
+The current spatial model is a **graph-enhanced global XGBoost model**, not a
+Graph Neural Network. Its adjacency and quantile interfaces are designed so a
+GNN or RL policy can be added without changing the downstream forecast schema.
+
+See [`docs/phase2/README.md`](docs/phase2/README.md) for the architecture,
+leakage rules, commands, artifact paths, and test instructions. Phase 2 code is
+ready to run against the local TLC Parquet dataset; numerical training and
+all-zone simulation metrics must be generated on the project machine.
+
+---
+
 ## Tech Stack
 
 ```text

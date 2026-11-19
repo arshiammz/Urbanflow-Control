@@ -1,0 +1,47 @@
+dataset:
+  name: nyc_hvfhv_real_simulation_inputs_all_eligible_zones
+  timezone: America/New_York
+  interval_minutes: 15
+
+paths:
+  raw_trip_glob: data/raw/hvfhv/**/*.parquet
+  demand: data/processed/full/zone_demand_15m_2024-01_2024-06.parquet
+  output_directory: data/processed/simulation/nyc_2024-01_2024-06_all_zones
+  metadata: reports/simulation/nyc-real-inputs-all-zones-metadata.json
+
+columns:
+  pickup_datetime: pickup_datetime
+  dropoff_datetime: dropoff_datetime
+  pickup_zone: PULocationID
+  dropoff_zone: DOLocationID
+  demand_timestamp: interval_start
+  demand_zone: zone_id
+  demand_value: pickup_count
+
+periods:
+  od_fit_start: "2024-01-01"
+  od_fit_end_exclusive: "2024-05-01"
+  train_start: "2024-01-08"
+  train_end_exclusive: "2024-05-01"
+  validation_start: "2024-05-01"
+  validation_end_exclusive: "2024-06-01"
+  test_start: "2024-06-01"
+  test_end_exclusive: "2024-07-01"
+
+zone_selection:
+  # null means every zone with at least this many fit-period pickups.
+  top_n_zones: null
+  minimum_fit_pickups: 1
+
+od_profile:
+  minimum_trip_minutes: 1.0
+  maximum_trip_minutes: 180.0
+  laplace_smoothing_alpha: 1.0
+  fallback_travel_minutes: 30.0
+  maximum_travel_steps: 12
+
+quality:
+  minimum_observed_od_coverage: 0.01
+
+output:
+  compression: zstd

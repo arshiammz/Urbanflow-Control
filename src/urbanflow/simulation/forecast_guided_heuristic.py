@@ -18,6 +18,7 @@ from urbanflow.simulation.fleet_simulator import (
     FleetSnapshot,
     SimulationCosts,
 )
+from urbanflow.geo.zone_graph import ZoneGraph
 from urbanflow.simulation.real_episode_baseline import (
     NetworkInputs,
     RealEpisodeBaselineConfig,
@@ -48,6 +49,7 @@ class ForecastGuidedConfig:
 
     baseline_config_path: Path
     forecast_predictions_path: Path
+    zone_graph_path: Path | None
 
     step_metrics_path: Path
     interval_zone_metrics_path: Path
@@ -57,6 +59,7 @@ class ForecastGuidedConfig:
     forecast_timestamp_column: str
     forecast_zone_column: str
     forecast_prediction_column: str
+    forecast_upper_prediction_column: str | None
     forecast_split_column: str
 
     policy_name: str
@@ -69,6 +72,7 @@ class ForecastGuidedConfig:
     maximum_relocation_fraction: float
 
     in_transit_supply_credit: float
+    risk_aversion: float
     apply_during_warmup: bool
 
     compression: str
@@ -149,6 +153,11 @@ def read_config(
             forecast_predictions_path=Path(
                 paths["forecast_predictions"]
             ),
+            zone_graph_path=(
+                Path(paths["zone_graph"])
+                if paths.get("zone_graph")
+                else None
+            ),
             step_metrics_path=Path(
                 paths["step_metrics"]
             ),
@@ -169,6 +178,11 @@ def read_config(
             ),
             forecast_prediction_column=str(
                 forecast["prediction_column"]
+            ),
+            forecast_upper_prediction_column=(
+                str(forecast["upper_prediction_column"])
+                if forecast.get("upper_prediction_column")
+                else None
             ),
             forecast_split_column=str(
                 forecast["split_column"]
@@ -194,6 +208,7 @@ def read_config(
             in_transit_supply_credit=float(
                 policy["in_transit_supply_credit"]
             ),
+            risk_aversion=float(policy.get("risk_aversion", 0.0)),
             apply_during_warmup=bool(
                 policy["apply_during_warmup"]
             ),
@@ -307,6 +322,14 @@ def validate_config(
             "between zero and one."
         )
 
+    if not 0.0 <= config.risk_aversion <= 1.0:
+        raise ForecastGuidedPolicyError("risk_aversion must be between zero and one.")
+
+    if config.zone_graph_path is not None and not config.zone_graph_path.exists():
+        raise ForecastGuidedPolicyError(
+            f"Zone graph does not exist: {config.zone_graph_path}"
+        )
+
     if not config.compression:
         raise ForecastGuidedPolicyError(
             "Output compression must not be empty."
@@ -320,7 +343,7 @@ def load_forecast_matrix(
     zone_ids: tuple[int, ...],
     episode_timestamps: list[datetime],
     expected_split: str = "validation",
-) -> tuple[list[datetime], FloatMatrix]:
+) -> tuple[list[datetime], FloatMatrix, FloatMatrix | None]:
     """Load exactly one ex-ante forecast per evaluated interval/zone.
 
     An offline forecast for t+1 is NOT an as-of forecast for decision t;
@@ -347,16 +370,25 @@ def load_forecast_matrix(
         config.forecast_prediction_column,
         config.forecast_split_column,
     }
+    if getattr(config, "forecast_upper_prediction_column", None) is not None:
+        required.add(config.forecast_upper_prediction_column)
     missing = sorted(required - set(frame.columns))
     if missing:
         raise ForecastGuidedPolicyError(f"Forecast file lacks columns: {missing}")
 
-    frame = frame.select(
+    selected_columns = [
         pl.col(config.forecast_timestamp_column).alias("interval_start"),
         pl.col(config.forecast_zone_column).cast(pl.Int64).alias("zone_id"),
         pl.col(config.forecast_prediction_column).cast(pl.Float64).alias("forecast"),
         pl.col(config.forecast_split_column).cast(pl.String).alias("split"),
-    ).filter(
+    ]
+    if getattr(config, "forecast_upper_prediction_column", None) is not None:
+        selected_columns.append(
+            pl.col(config.forecast_upper_prediction_column)
+            .cast(pl.Float64)
+            .alias("forecast_upper")
+        )
+    frame = frame.select(*selected_columns).filter(
         pl.col("interval_start").is_between(
             min(episode_timestamps), max(episode_timestamps), closed="both"
         ) & pl.col("zone_id").is_in(list(zone_ids))
@@ -400,9 +432,20 @@ def load_forecast_matrix(
     matrix = result.get_column("forecast").to_numpy().reshape(
         len(episode_timestamps), len(zone_ids)
     ).astype(np.float64)
+    upper_matrix = None
+    if getattr(config, "forecast_upper_prediction_column", None) is not None:
+        if result.get_column("forecast_upper").null_count():
+            raise ForecastGuidedPolicyError("Upper-quantile forecast grid contains nulls.")
+        upper_matrix = result.get_column("forecast_upper").to_numpy().reshape(
+            len(episode_timestamps), len(zone_ids)
+        ).astype(np.float64)
+        if not np.isfinite(upper_matrix).all() or (upper_matrix < 0).any():
+            raise ForecastGuidedPolicyError("Upper-quantile matrix contains invalid values.")
+        if (upper_matrix < matrix).any():
+            raise ForecastGuidedPolicyError("Upper forecast quantile must be >= central forecast.")
     if not np.isfinite(matrix).all() or (matrix < 0).any():
         raise ForecastGuidedPolicyError("Forecast matrix contains invalid values.")
-    return episode_timestamps, matrix
+    return episode_timestamps, matrix, upper_matrix
 
 
 def build_forecast_target(
@@ -446,6 +489,7 @@ def greedy_relocation_action(
     future_forecasts: FloatMatrix,
     relocation_travel_steps: IntegerMatrix,
     config: ForecastGuidedConfig,
+    allowed_relocation_edges: NDArray[np.bool_] | None = None,
 ) -> PolicyDecision:
     """Create one feasible greedy relocation matrix."""
     available = (
@@ -478,6 +522,10 @@ def greedy_relocation_action(
         raise ForecastGuidedPolicyError(
             "Relocation matrix shape does not match fleet state."
         )
+    if allowed_relocation_edges is not None:
+        allowed_relocation_edges = np.asarray(allowed_relocation_edges, dtype=bool)
+        if allowed_relocation_edges.shape != expected_shape:
+            raise ForecastGuidedPolicyError("Zone graph mask shape does not match fleet state.")
 
     current_reserve = np.ceil(
         current_forecast
@@ -599,6 +647,10 @@ def greedy_relocation_action(
                     destination,
                 ]
                 <= config.maximum_relocation_steps
+                and (
+                    allowed_relocation_edges is None
+                    or allowed_relocation_edges[origin, destination]
+                )
             )
         ]
 
@@ -880,6 +932,7 @@ def build_simulator(
     baseline_config: RealEpisodeBaselineConfig,
     network: NetworkInputs,
     initial_vehicles: IntegerVector,
+    allowed_relocation_edges: NDArray[np.bool_] | None = None,
 ) -> FleetSimulator:
     """Build one identically configured simulator."""
     return FleetSimulator(
@@ -894,6 +947,7 @@ def build_simulator(
         passenger_travel_steps=(
             network.passenger_travel_steps
         ),
+        allowed_relocation_edges=allowed_relocation_edges,
         costs=SimulationCosts(
             unmet_demand_penalty=(
                 baseline_config.unmet_demand_penalty
@@ -978,6 +1032,7 @@ def run_forecast_guided_comparison(
     (
         forecast_timestamps,
         forecast_matrix,
+        upper_forecast_matrix,
     ) = load_forecast_matrix(
         config=config,
         baseline_config=baseline_config,
@@ -1005,20 +1060,34 @@ def run_forecast_guided_comparison(
             "Forecast and demand episode timestamps do not align."
         )
 
+    allowed_relocation_edges = None
+    if config.zone_graph_path is not None:
+        try:
+            graph = ZoneGraph.load(config.zone_graph_path)
+        except (OSError, ValueError) as error:
+            raise ForecastGuidedPolicyError(f"Could not load zone graph: {error}") from error
+        if set(graph.zone_ids) != set(zone_ids):
+            raise ForecastGuidedPolicyError(
+                "Zone graph IDs do not match the simulation network."
+            )
+        graph_positions = [graph.zone_ids.index(zone_id) for zone_id in zone_ids]
+        allowed_relocation_edges = (
+            graph.adjacency[np.ix_(graph_positions, graph_positions)] > 0
+        )
+        np.fill_diagonal(allowed_relocation_edges, False)
+
     baseline_simulator = build_simulator(
         baseline_config=baseline_config,
         network=network,
-        initial_vehicles=(
-            fleet_sizing.initial_vehicles
-        ),
+        initial_vehicles=fleet_sizing.initial_vehicles,
+        allowed_relocation_edges=allowed_relocation_edges,
     )
 
     policy_simulator = build_simulator(
         baseline_config=baseline_config,
         network=network,
-        initial_vehicles=(
-            fleet_sizing.initial_vehicles
-        ),
+        initial_vehicles=fleet_sizing.initial_vehicles,
+        allowed_relocation_edges=allowed_relocation_edges,
     )
 
     zero_action = np.zeros(
@@ -1060,9 +1129,12 @@ def run_forecast_guided_comparison(
             or config.apply_during_warmup
         )
 
-        current_forecast = forecast_matrix[
-            step_index
-        ]
+        current_forecast = forecast_matrix[step_index]
+        if upper_forecast_matrix is not None:
+            current_forecast = (
+                (1.0 - config.risk_aversion) * current_forecast
+                + config.risk_aversion * upper_forecast_matrix[step_index]
+            )
 
         future_forecasts = projector.project(
             decision_time=timestamp,
@@ -1079,6 +1151,7 @@ def run_forecast_guided_comparison(
                     relocation_travel_steps
                 ),
                 config=config,
+                allowed_relocation_edges=allowed_relocation_edges,
             )
 
             policy_action = (
@@ -1639,6 +1712,14 @@ def run_forecast_guided_comparison(
             "seasonal_profile_fitted_on_split": baseline_config.sizing_split,
             "future_realized_demand_in_policy": False,
             "future_offline_predictions_in_policy": False,
+            "central_quantile_column": config.forecast_prediction_column,
+            "upper_quantile_column": config.forecast_upper_prediction_column,
+            "risk_aversion": config.risk_aversion,
+        },
+        "network": {
+            "zone_count": zone_count,
+            "zone_graph_constraints_enabled": allowed_relocation_edges is not None,
+            "zone_graph_path": config.zone_graph_path,
         },
         "policy": {
             "name": config.policy_name,
