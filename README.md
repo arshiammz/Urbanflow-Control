@@ -44,6 +44,18 @@ The system combines a leakage-aware data pipeline, graph-enhanced probabilistic 
 
 ---
 
+## Dashboard previews
+
+The following static dashboard previews summarize the recorded development benchmark and the documented decision workflow. They are generated for repository documentation and do not require running the application. The forecasting panel reflects the June development-test benchmark; the simulation panel reflects the May 2–30 historical replay. The Deep RL panel is an architecture/readiness view, **not a claim of completed PPO performance**.
+
+![Forecasting benchmark dashboard](assets/readme/dashboard_forecasting.png)
+
+![Forecast-guided simulation dashboard](assets/readme/dashboard_simulation.png)
+
+![Constrained Deep RL workflow dashboard](assets/readme/dashboard_deep_rl.png)
+
+---
+
 ## Data foundation
 
 The primary demand source is the NYC Taxi & Limousine Commission's monthly **HVFHV trip-record dataset**. The original Jan–Jun 2024 forecasting panel contains:
