@@ -1,0 +1,20 @@
+base_benchmark_config: artifacts/generated_configs/final_holdout_july/final-holdout-benchmark.yaml
+output_directory: reports/evaluation/stress_scenarios_july
+random_seed: 202407
+scenarios:
+  demand_surge_25pct:
+    kind: demand_and_forecast_scale
+    actual_demand_multiplier: 1.25
+    forecast_multiplier: 1.25
+  forecast_underestimation_25pct:
+    kind: forecast_scale
+    forecast_multiplier: 0.75
+  fleet_shortage_20pct:
+    kind: fleet_multiplier
+    fleet_multiplier: 0.80
+  travel_disruption_50pct:
+    kind: travel_time_multiplier
+    travel_multiplier: 1.50
+  network_edge_loss_15pct:
+    kind: graph_edge_loss
+    edge_loss_fraction: 0.15

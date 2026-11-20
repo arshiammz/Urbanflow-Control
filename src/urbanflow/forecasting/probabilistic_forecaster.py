@@ -102,7 +102,7 @@ def quantile_metrics(
 
 @dataclass(frozen=True)
 class ProbabilisticForecastSettings:
-    """Settings for train/April-selection/refit/May-June forecast chronology."""
+    """Settings for chronological quantile-model selection, refit and prediction."""
 
     input_path: Path
     model_directory: Path
@@ -120,6 +120,9 @@ class ProbabilisticForecastSettings:
     selection_validation_end_exclusive: date
     prediction_start: date
     prediction_end_exclusive: date
+    selection_validation_split: str
+    final_training_splits: tuple[str, ...]
+    prediction_splits: tuple[str, ...]
     estimator_candidates: tuple[int, ...]
     learning_rate: float
     max_depth: int
@@ -169,6 +172,16 @@ class ProbabilisticForecastSettings:
                 prediction_end_exclusive=date.fromisoformat(
                     str(chronology["prediction_end_exclusive"])
                 ),
+                selection_validation_split=str(
+                    chronology.get("selection_validation_split", "train")
+                ),
+                final_training_splits=tuple(
+                    str(v) for v in chronology.get("final_training_splits", ["train"])
+                ),
+                prediction_splits=tuple(
+                    str(v)
+                    for v in chronology.get("prediction_splits", ["validation", "test"])
+                ),
                 estimator_candidates=tuple(int(v) for v in model["estimator_candidates"]),
                 learning_rate=float(model["learning_rate"]),
                 max_depth=int(model["max_depth"]),
@@ -201,6 +214,18 @@ class ProbabilisticForecastSettings:
             raise ProbabilisticForecastError("Estimator candidates must be unique and ascending.")
         if not self.estimator_candidates or self.estimator_candidates[0] < 1:
             raise ProbabilisticForecastError("Estimator candidates must be positive.")
+        if (
+            not self.selection_validation_split
+            or not self.final_training_splits
+            or not self.prediction_splits
+        ):
+            raise ProbabilisticForecastError("Chronology split selections must not be empty.")
+        if "test" in self.final_training_splits:
+            raise ProbabilisticForecastError("The test split cannot be used for final model training.")
+        if set(self.final_training_splits).intersection(self.prediction_splits):
+            raise ProbabilisticForecastError(
+                "Prediction splits must be disjoint from final-training splits."
+            )
         if not (self.train_start < self.selection_train_end_exclusive):
             raise ProbabilisticForecastError("Selection training window is invalid.")
         if not (
@@ -353,7 +378,7 @@ def _write_json(path: Path, payload: dict[str, Any]) -> None:
 
 
 def train_probabilistic_forecaster(config_path: Path) -> dict[str, Any]:
-    """Select quantile model complexity on April and forecast May/June."""
+    """Select quantile model complexity on a past window and forecast a later period."""
     settings = ProbabilisticForecastSettings.from_yaml(config_path)
     train = _read_slice(
         settings,
@@ -365,28 +390,28 @@ def train_probabilistic_forecaster(config_path: Path) -> dict[str, Any]:
         settings,
         start=settings.selection_validation_start,
         end=settings.selection_validation_end_exclusive,
-        split_values=("train",),
+        split_values=(settings.selection_validation_split,),
     )
     final_training = _read_slice(
         settings,
         start=settings.train_start,
         end=settings.prediction_start,
-        split_values=("train",),
+        split_values=settings.final_training_splits,
     )
     prediction = _read_slice(
         settings,
         start=settings.prediction_start,
         end=settings.prediction_end_exclusive,
-        split_values=("validation", "test"),
+        split_values=settings.prediction_splits,
     )
     if train.get_column("service_date").max() >= settings.selection_train_end_exclusive:
-        raise ProbabilisticForecastError("Selection training includes April or later labels.")
+        raise ProbabilisticForecastError("Selection training extends beyond its configured window.")
     if validation.get_column("service_date").min() < settings.selection_validation_start:
-        raise ProbabilisticForecastError("April selection contains pre-April rows.")
+        raise ProbabilisticForecastError("Selection validation contains pre-validation rows.")
     if final_training.get_column("service_date").max() >= settings.prediction_start:
-        raise ProbabilisticForecastError("Final training includes May labels.")
+        raise ProbabilisticForecastError("Final training includes prediction-period labels.")
     if prediction.get_column("service_date").min() < settings.prediction_start:
-        raise ProbabilisticForecastError("Prediction window contains pre-May rows.")
+        raise ProbabilisticForecastError("Prediction window contains pre-prediction rows.")
 
     contract = _categorical_contract(train, settings.categorical_columns)
     x_train = _features(train, settings, contract)
@@ -490,9 +515,11 @@ def train_probabilistic_forecaster(config_path: Path) -> dict[str, Any]:
                 settings.prediction_start.isoformat(),
                 settings.prediction_end_exclusive.isoformat(),
             ],
-            "may_labels_used_for_selection": False,
-            "may_labels_used_for_training": False,
-            "june_labels_used_for_selection": False,
+            "selection_validation_split": settings.selection_validation_split,
+            "final_training_splits": list(settings.final_training_splits),
+            "prediction_splits": list(settings.prediction_splits),
+            "prediction_period_labels_used_for_selection": False,
+            "prediction_period_labels_used_for_training": False,
             "weather_observations_used_as_features": False,
         },
         "selection": selection,
@@ -517,6 +544,10 @@ def train_probabilistic_forecaster(config_path: Path) -> dict[str, Any]:
             < validation.get_column("service_date").min(),
             "final_training_excludes_prediction_period": (
                 final_training.get_column("service_date").max()
+                < prediction.get_column("service_date").min()
+            ),
+            "prediction_period_excluded_from_model_selection": (
+                validation.get_column("service_date").max()
                 < prediction.get_column("service_date").min()
             ),
             "predictions_are_non_negative": bool(np.all(ordered_predictions >= 0)),

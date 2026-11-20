@@ -1,0 +1,41 @@
+dataset:
+  name: nyc_hvfhv_untouched_july_2024_final_holdout
+
+holdout:
+  split: test
+  start_date: "2024-07-01"
+  end_date_inclusive: "2024-07-31"
+  warmup_days: 1
+  interval_minutes: 15
+  expected_zone_count: null
+  expected_intervals_per_day: 96
+
+paths:
+  historical_demand: data/processed/simulation/nyc_2024-01_2024-07_all_zones/historical_demand.parquet
+  zone_index: data/processed/simulation/nyc_2024-01_2024-07_all_zones/zone_index.parquet
+  od_profile: data/processed/simulation/nyc_2024-01_2024-07_all_zones/od_profile.parquet
+  decision_time_forecasts: data/processed/full/decision_time_quantile_horizon_15m_2024-01_2024-07.parquet
+  one_step_forecasts: data/processed/full/quantile_graph_weather_predictions_15m_2024-01_2024-07.parquet
+  zone_graph: data/processed/spatial/nyc_taxi_zone_graph_july_holdout.json
+  zone_lookup: data/reference/taxi_zone_lookup.csv
+  quantile_model_report: reports/forecasting/2024-01_2024-07-quantile-graph-weather-metrics.json
+  rl_config_template: configs/rl/constrained_ppo.yaml
+  rl_training_report: reports/rl/constrained_ppo_training.json
+  rl_checkpoint: artifacts/models/constrained_ppo/champion_train_selected.pt
+  baseline_config_template: configs/simulation/real_episode_baseline_all_zones.yaml
+  greedy_config_template: configs/simulation/forecast_guided_heuristic_all_zones.yaml
+  benchmark_config_template: configs/simulation/optimization_benchmark.yaml
+  generated_config_directory: artifacts/generated_configs/final_holdout_july
+
+output:
+  directory: reports/evaluation/final_holdout_july
+  report: reports/evaluation/2024-07-final-holdout.json
+  daily_metrics: reports/evaluation/2024-07-final-holdout-daily-metrics.parquet
+  benchmark_report: reports/evaluation/final_holdout_july/optimization-benchmark.json
+  rl_report: reports/evaluation/final_holdout_july/rl-benchmark.json
+  compression: zstd
+
+statistics:
+  bootstrap_samples: 2000
+  confidence_level: 0.95
+  random_seed: 202407

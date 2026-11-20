@@ -1,9 +1,9 @@
-"""Causal training episodes and Phase 2 decision-time evaluation episodes.
+"""Causal training episodes and decision-time evaluation episodes.
 
 Training uses ONLY train-split observed demand, plus a train-fitted seasonal
-profile and a deliberately approximate uncertainty proxy. May evaluation uses
-the exact Phase 2 archived decision-time quantile forecasts; May labels NEVER
-enter the training replay construction or policy gradient updates.
+profile and a deliberately approximate uncertainty proxy. Evaluation uses the
+configured split's archived decision-time quantile forecasts. Holdout labels
+never enter training replay construction or policy gradient updates.
 """
 from __future__ import annotations
 
@@ -250,33 +250,102 @@ def load_training_bundle(
     return result
 
 
-def load_validation_bundle(phase3_config: Path) -> EpisodeBundle:
-    """Reuse Phase 3 evaluation date/split and EXACT decision-time P10/50/90."""
+def load_evaluation_bundle(
+    phase3_config: Path,
+    *,
+    evaluation_start_date: date | None = None,
+    evaluation_end_date: date | None = None,
+) -> EpisodeBundle:
+    """Load one frozen-policy evaluation window using decision-time forecasts.
+
+    When a date range is configured, simulator state is continuous across the
+    entire range and the shared no-rebalancing warmup is applied once. Forecasts
+    are loaded only for evaluation timestamps; warmup forecast slots are zero
+    because the policy is not permitted to act during warmup.
+    """
     from urbanflow.simulation.optimization_benchmark import _load_decision_time_quantiles
-    from urbanflow.simulation.real_episode_baseline import extract_episode
+    from urbanflow.simulation.real_episode_baseline import (
+        extract_episode,
+        extract_episode_range,
+    )
+
     (config, baseline, network, historical, initial, graph,
      region_index, region_names) = _inputs(phase3_config)
-    if baseline.evaluation_split != "validation" or not (
-        date(2024, 5, 1) <= baseline.service_date <= date(2024, 5, 31)
-    ):
-        raise RLEpisodeError("Phase 4 selection/evaluation must be May validation only.")
-    ts, demand = extract_episode(historical, zone_count=len(network.zone_ids), config=baseline)
-    p10, p50, p90, provenance = _load_decision_time_quantiles(
+    if (evaluation_start_date is None) != (evaluation_end_date is None):
+        raise RLEpisodeError("Evaluation start and end dates must be configured together.")
+    if evaluation_start_date is not None and evaluation_end_date is not None:
+        if evaluation_end_date < evaluation_start_date:
+            raise RLEpisodeError("Evaluation date range is invalid.")
+        ts, demand = extract_episode_range(
+            historical,
+            zone_count=len(network.zone_ids),
+            config=baseline,
+            evaluation_start_date=evaluation_start_date,
+            evaluation_end_date=evaluation_end_date,
+        )
+        start_date = evaluation_start_date
+        end_date = evaluation_end_date
+    else:
+        ts, demand = extract_episode(
+            historical,
+            zone_count=len(network.zone_ids),
+            config=baseline,
+        )
+        start_date = baseline.service_date
+        end_date = baseline.service_date
+
+    evaluation_mask = np.asarray(
+        [start_date <= timestamp.date() <= end_date for timestamp in ts],
+        dtype=bool,
+    )
+    evaluation_timestamps = [
+        timestamp
+        for timestamp, selected in zip(ts, evaluation_mask, strict=True)
+        if selected
+    ]
+    if not evaluation_timestamps:
+        raise RLEpisodeError("Evaluation window contains no timestamps.")
+    eval_p10, eval_p50, eval_p90, provenance = _load_decision_time_quantiles(
         config.decision_time_forecasts_path,
-        episode_timestamps=ts, zone_ids=network.zone_ids,
-        expected_split="validation", timezone=baseline.timezone,
+        episode_timestamps=evaluation_timestamps,
+        zone_ids=network.zone_ids,
+        expected_split=baseline.evaluation_split,
+        timezone=baseline.timezone,
         interval_minutes=baseline.interval_minutes,
         horizon_steps=config.forecast_horizon_steps,
     )
-    warmup = sum(timestamp.date() < baseline.service_date for timestamp in ts)
+    warmup = int((~evaluation_mask).sum())
+    shape = (len(ts), config.forecast_horizon_steps, len(network.zone_ids))
+    p10 = np.zeros(shape, dtype=np.float64)
+    p50 = np.zeros(shape, dtype=np.float64)
+    p90 = np.zeros(shape, dtype=np.float64)
+    p10[evaluation_mask] = eval_p10
+    p50[evaluation_mask] = eval_p50
+    p90[evaluation_mask] = eval_p90
     result = EpisodeBundle(
         network=network, initial_vehicles=initial, allowed_edges=graph,
         region_index=region_index, region_names=region_names, baseline=baseline,
         episodes=(Episode(
             timestamps=tuple(ts), demand=demand, p10=p10, p50=p50, p90=p90,
-            warmup_steps=warmup, split="validation", forecast_provenance=provenance,
+            warmup_steps=warmup, split=baseline.evaluation_split,
+            forecast_provenance=provenance,
         ),),
-        forecast_horizon_steps=config.forecast_horizon_steps, source="validation",
+        forecast_horizon_steps=config.forecast_horizon_steps,
+        source=baseline.evaluation_split,
     )
     result.validate()
     return result
+
+
+def load_validation_bundle(phase3_config: Path) -> EpisodeBundle:
+    """Keep the Phase 4 May-validation contract explicit and fail closed."""
+    from urbanflow.simulation.optimization_benchmark import read_config as read_benchmark_config
+    from urbanflow.simulation.real_episode_baseline import read_config as read_baseline_config
+
+    benchmark = read_benchmark_config(phase3_config)
+    baseline = read_baseline_config(benchmark.baseline_config_path)
+    if baseline.evaluation_split != "validation" or not (
+        date(2024, 5, 1) <= baseline.service_date <= date(2024, 5, 31)
+    ):
+        raise RLEpisodeError("Phase 4 selection/evaluation must be May validation only.")
+    return load_evaluation_bundle(phase3_config)

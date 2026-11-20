@@ -6,7 +6,7 @@ import json
 import math
 import time
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -48,6 +48,7 @@ from urbanflow.simulation.real_episode_baseline import (
     load_historical_demand,
     load_od_matrices,
     load_zone_index,
+    extract_episode_range,
     read_config as read_baseline_config,
 )
 
@@ -89,6 +90,8 @@ class OptimizationBenchmarkConfig:
     forecast_horizon_steps: int
     fairness_cost_weight: float
     output_compression: str
+    evaluation_start_date: date | None = None
+    evaluation_end_date: date | None = None
 
 
 def read_config(path: Path) -> OptimizationBenchmarkConfig:
@@ -117,6 +120,16 @@ def read_config(path: Path) -> OptimizationBenchmarkConfig:
             forecast_horizon_steps=int(benchmark["forecast_horizon_steps"]),
             fairness_cost_weight=float(benchmark["fairness_cost_weight"]),
             output_compression=str(output["compression"]),
+            evaluation_start_date=(
+                date.fromisoformat(str(benchmark["evaluation_start_date"]))
+                if benchmark.get("evaluation_start_date") is not None
+                else None
+            ),
+            evaluation_end_date=(
+                date.fromisoformat(str(benchmark["evaluation_end_date"]))
+                if benchmark.get("evaluation_end_date") is not None
+                else None
+            ),
         )
     except OptimizationBenchmarkError:
         raise
@@ -131,6 +144,16 @@ def validate_config(config: OptimizationBenchmarkConfig) -> None:
         raise OptimizationBenchmarkError("dataset.name must not be empty.")
     if config.forecast_horizon_steps < 2:
         raise OptimizationBenchmarkError("forecast_horizon_steps must be at least two.")
+    if (config.evaluation_start_date is None) != (config.evaluation_end_date is None):
+        raise OptimizationBenchmarkError(
+            "evaluation_start_date and evaluation_end_date must be configured together."
+        )
+    if (
+        config.evaluation_start_date is not None
+        and config.evaluation_end_date is not None
+        and config.evaluation_end_date < config.evaluation_start_date
+    ):
+        raise OptimizationBenchmarkError("Evaluation date range is invalid.")
     if not math.isfinite(config.fairness_cost_weight) or config.fairness_cost_weight < 0:
         raise OptimizationBenchmarkError("fairness_cost_weight must be finite and non-negative.")
     if not config.output_compression:
@@ -653,21 +676,60 @@ def run_optimization_benchmark(config_path: Path) -> dict[str, Any]:
         network=network,
         config=baseline_config,
     )
-    episode_timestamps, demand_matrix = extract_episode(
-        historical_demand,
-        zone_count=zone_count,
-        config=baseline_config,
-    )
+    if config.evaluation_start_date is not None:
+        assert config.evaluation_end_date is not None
+        episode_timestamps, demand_matrix = extract_episode_range(
+            historical_demand,
+            zone_count=zone_count,
+            config=baseline_config,
+            evaluation_start_date=config.evaluation_start_date,
+            evaluation_end_date=config.evaluation_end_date,
+        )
+        evaluation_start = config.evaluation_start_date
+        evaluation_end = config.evaluation_end_date
+    else:
+        episode_timestamps, demand_matrix = extract_episode(
+            historical_demand,
+            zone_count=zone_count,
+            config=baseline_config,
+        )
+        evaluation_start = baseline_config.service_date
+        evaluation_end = baseline_config.service_date
 
-    p10, p50, p90, forecast_provenance = _load_decision_time_quantiles(
+    evaluation_mask = np.asarray(
+        [evaluation_start <= timestamp.date() <= evaluation_end
+         for timestamp in episode_timestamps],
+        dtype=bool,
+    )
+    evaluation_timestamps = [
+        timestamp for timestamp, selected in zip(
+            episode_timestamps, evaluation_mask, strict=True
+        ) if selected
+    ]
+    if not evaluation_timestamps:
+        raise OptimizationBenchmarkError("Evaluation window contains no timestamps.")
+    eval_p10, eval_p50, eval_p90, forecast_provenance = _load_decision_time_quantiles(
         config.decision_time_forecasts_path,
-        episode_timestamps=episode_timestamps,
+        episode_timestamps=evaluation_timestamps,
         zone_ids=zone_ids,
         expected_split=baseline_config.evaluation_split,
         timezone=baseline_config.timezone,
         interval_minutes=baseline_config.interval_minutes,
         horizon_steps=config.forecast_horizon_steps,
     )
+    # Forecasts are consumed only after the evaluation boundary.  Warmup is
+    # deliberately populated with zeros because no policy may act there.
+    forecast_shape = (
+        len(episode_timestamps),
+        config.forecast_horizon_steps,
+        zone_count,
+    )
+    p10 = np.zeros(forecast_shape, dtype=np.float64)
+    p50 = np.zeros(forecast_shape, dtype=np.float64)
+    p90 = np.zeros(forecast_shape, dtype=np.float64)
+    p10[evaluation_mask] = eval_p10
+    p50[evaluation_mask] = eval_p50
+    p90[evaluation_mask] = eval_p90
     risk_adjusted = (
         (1.0 - greedy_config.risk_aversion) * p50
         + greedy_config.risk_aversion * p90
@@ -736,7 +798,7 @@ def run_optimization_benchmark(config_path: Path) -> dict[str, Any]:
         for step_index, (timestamp, actual_demand) in enumerate(
             zip(episode_timestamps, demand_matrix, strict=True)
         ):
-            is_evaluation = timestamp.date() == baseline_config.service_date
+            is_evaluation = evaluation_start <= timestamp.date() <= evaluation_end
             if not is_evaluation:
                 warmup_steps += 1
             else:
@@ -1109,6 +1171,9 @@ def run_optimization_benchmark(config_path: Path) -> dict[str, Any]:
         "episode": {
             "evaluation_split": baseline_config.evaluation_split,
             "service_date": baseline_config.service_date.isoformat(),
+            "evaluation_start_date": evaluation_start.isoformat(),
+            "evaluation_end_date": evaluation_end.isoformat(),
+            "evaluation_day_count": (evaluation_end - evaluation_start).days + 1,
             "warmup_steps": warmup_steps,
             "evaluation_steps": evaluation_steps,
             "first_interval": episode_timestamps[0].isoformat(),

@@ -1339,6 +1339,111 @@ def extract_episode(
     )
 
 
+def extract_episode_range(
+    historical_demand: pl.DataFrame,
+    *,
+    zone_count: int,
+    config: RealEpisodeBaselineConfig,
+    evaluation_start_date: date,
+    evaluation_end_date: date,
+) -> tuple[list[datetime], IntegerMatrix]:
+    """Extract one continuous warmup + multi-day evaluation window.
+
+    The warmup is shared and occurs exactly once before ``evaluation_start_date``.
+    Every interval in the inclusive evaluation date range must belong to the
+    configured holdout split.  This is used by the final untouched holdout so
+    fleet state carries continuously across the evaluation month.
+    """
+    if evaluation_end_date < evaluation_start_date:
+        raise RealEpisodeBaselineError(
+            "evaluation_end_date must not precede evaluation_start_date."
+        )
+    warmup_start = evaluation_start_date - timedelta(days=config.warmup_days)
+    frame = (
+        historical_demand.filter(
+            pl.col("service_date").is_between(
+                warmup_start,
+                evaluation_end_date,
+                closed="both",
+            )
+        )
+        .sort("interval_start", "zone_index")
+    )
+    if frame.height == 0:
+        raise RealEpisodeBaselineError("Selected multi-day episode contains no rows.")
+
+    evaluation = frame.filter(
+        pl.col("service_date").is_between(
+            evaluation_start_date,
+            evaluation_end_date,
+            closed="both",
+        )
+    )
+    if evaluation.height == 0:
+        raise RealEpisodeBaselineError("Evaluation date range contains no demand rows.")
+    observed_splits = sorted(
+        str(value) for value in evaluation.get_column("split").unique().to_list()
+    )
+    if observed_splits != [config.evaluation_split]:
+        raise RealEpisodeBaselineError(
+            "Evaluation date range does not match configured split: "
+            f"expected={config.evaluation_split}, observed={observed_splits}."
+        )
+
+    interval_counts = frame.group_by("interval_start").agg(
+        pl.len().alias("row_count"),
+        pl.col("zone_index").n_unique().alias("unique_zone_count"),
+        pl.col("zone_index").min().alias("minimum_zone_index"),
+        pl.col("zone_index").max().alias("maximum_zone_index"),
+    )
+    invalid = interval_counts.filter(
+        (pl.col("row_count") != zone_count)
+        | (pl.col("unique_zone_count") != zone_count)
+        | (pl.col("minimum_zone_index") != 0)
+        | (pl.col("maximum_zone_index") != zone_count - 1)
+    )
+    if invalid.height:
+        raise RealEpisodeBaselineError(
+            "Multi-day episode is not a dense zone-time panel: "
+            f"invalid_intervals={invalid.height}."
+        )
+
+    timestamps = [
+        value
+        for value in frame.get_column("interval_start").unique().sort().to_list()
+    ]
+    if any(value.tzinfo is None for value in timestamps):
+        raise RealEpisodeBaselineError("Episode timestamps must be timezone-aware.")
+    expected_seconds = config.interval_minutes * 60
+    for previous, current in zip(timestamps, timestamps[1:], strict=False):
+        elapsed = (current.astimezone(UTC) - previous.astimezone(UTC)).total_seconds()
+        if elapsed != expected_seconds:
+            raise RealEpisodeBaselineError(
+                "Multi-day episode timestamps are not contiguous in UTC: "
+                f"previous={previous}, current={current}."
+            )
+
+    expected_zone_indices = np.tile(
+        np.arange(zone_count, dtype=np.int64),
+        len(timestamps),
+    )
+    observed_zone_indices = frame.get_column("zone_index").to_numpy().astype(
+        np.int64, copy=False
+    )
+    if not np.array_equal(observed_zone_indices, expected_zone_indices):
+        raise RealEpisodeBaselineError("Multi-day zone ordering is invalid.")
+    demand_matrix = frame.get_column("actual_demand").to_numpy().reshape(
+        len(timestamps), zone_count
+    ).astype(np.int64, copy=False)
+    if demand_matrix.shape != (len(timestamps), zone_count) or (demand_matrix < 0).any():
+        raise RealEpisodeBaselineError("Multi-day demand matrix has an invalid shape or values.")
+    warmup_steps = sum(value.date() < evaluation_start_date for value in timestamps)
+    evaluation_steps = len(timestamps) - warmup_steps
+    if warmup_steps <= 0 or evaluation_steps <= 0:
+        raise RealEpisodeBaselineError("Multi-day episode needs warmup and evaluation rows.")
+    return timestamps, demand_matrix
+
+
 def write_parquet_atomically(
     frame: pl.DataFrame,
     *,

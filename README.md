@@ -971,3 +971,53 @@ RL improvement is claimed until the real-data run completes.
 
 See **[Phase 4: Gymnasium + Constrained PPO](docs/phase4/README.md)** for
 architecture, chronology, limitations, training and evaluation commands.
+
+---
+
+## Phase 5 — Final Evaluation & Production Delivery
+
+Phase 5 adds the final untouched July 2024 evaluation workflow and a production
+serving/monitoring layer around the Phase 1–4 forecasting, simulator,
+optimization and constrained-PPO components.
+
+### Final holdout protocol
+
+- January–April: model training and train-only PPO selection.
+- May–June: quantile-model complexity selection and validation.
+- July 1–31: untouched final test period.
+- June 30: one shared no-rebalancing warmup before the July episode.
+- July simulator state is continuous; fleet state is not reset between days.
+
+The five-policy final evaluation compares No Rebalancing, Greedy, Min-Cost Flow,
+MPC and the frozen Constrained PPO checkpoint. It reports aggregate and daily
+service/cost metrics, bootstrap confidence intervals, service-rate and cost
+CVaR, worst-day performance, fairness, latency and memory profiling. Bootstrap
+intervals over daily metrics are descriptive because daily results are dependent
+inside the continuous episode.
+
+Build the July inputs/forecasts and run the final holdout:
+
+```bash
+make build-july
+make final-holdout
+make stress
+```
+
+### Production components
+
+- FastAPI endpoints for forecasts, zone status, rebalancing plans and one-step
+  simulator previews.
+- Streamlit map-based operational dashboard using taxi-zone centroids.
+- Docker Compose for API, dashboard, MLflow and Prometheus.
+- Train-only demand PSI reference and batch drift report.
+- SHA-256 model manifest, verification and rollback scripts.
+- GitHub Actions for Ruff, unit tests, static production checks and Docker build.
+
+See [`docs/phase5/README.md`](docs/phase5/README.md) for the complete runbook,
+API contracts, deployment guide, monitoring, model governance and limitations.
+
+**Status note:** Phase 5 source/configuration and deployment workflows are
+included. The July data rebuild, final numerical holdout, stress scenarios,
+production manifest promotion and live API inference require the local Parquet
+files and trained model/checkpoint artifacts; no final July performance result
+is claimed until those commands complete successfully.

@@ -17,7 +17,11 @@ import torch
 import yaml
 
 from urbanflow.rl.action_projection import RelocationConstraints
-from urbanflow.rl.episodes import EpisodeBundle, load_training_bundle, load_validation_bundle
+from urbanflow.rl.episodes import (
+    EpisodeBundle,
+    load_evaluation_bundle,
+    load_training_bundle,
+)
 from urbanflow.rl.environment import FleetRebalancingEnv
 from urbanflow.rl.ppo import GraphActorCritic, PPOSettings, train_one_seed
 from urbanflow.simulation.forecast_guided_heuristic import read_config as read_greedy_config
@@ -318,7 +322,7 @@ def _comparison(reference: dict[str, Any], policy: dict[str, Any]) -> dict[str, 
 
 
 def evaluate(config_path: Path) -> dict[str, Any]:
-    """May-only frozen PPO replay, strictly compared to Phase 3 four-policy report."""
+    """Replay a frozen PPO policy against the configured Phase 3 benchmark."""
     import polars as pl
     config = read_config(config_path)
     phase3 = read_benchmark_config(config.phase3_config)
@@ -327,7 +331,20 @@ def evaluate(config_path: Path) -> dict[str, Any]:
             "Phase 3 benchmark report missing; run scripts/run_optimization_benchmark.py first."
         )
     baseline_report = json.loads(phase3.report_path.read_text(encoding="utf-8"))
-    bundle = load_validation_bundle(config.phase3_config)
+    bundle = load_evaluation_bundle(
+        config.phase3_config,
+        evaluation_start_date=phase3.evaluation_start_date,
+        evaluation_end_date=phase3.evaluation_end_date,
+    )
+    if phase3.evaluation_start_date is None and phase3.evaluation_end_date is None:
+        if (
+            bundle.source != "validation"
+            or not date(2024, 5, 1) <= bundle.baseline.service_date <= date(2024, 5, 31)
+        ):
+            raise RLWorkflowError(
+                "Single-day Phase 4 evaluation must remain on May validation. "
+                "Configure an explicit date range for a separate final holdout replay."
+            )
     constraints = build_constraints(config)
     env = make_environment(bundle, config, constraints)
     if not config.training_report.exists():
@@ -351,11 +368,18 @@ def evaluate(config_path: Path) -> dict[str, Any]:
         raise RLWorkflowError("Checkpoint risk/reward specification differs from evaluation.")
     env.fairness_multiplier = float(metadata["fairness_multiplier"])
     if (baseline_report["episode"]["service_date"] != bundle.baseline.service_date.isoformat()
-            or baseline_report["episode"]["evaluation_split"] != "validation"
+            or baseline_report["episode"]["evaluation_split"] != bundle.source
             or baseline_report["network"]["total_fleet"] != int(bundle.initial_vehicles.sum())
             or baseline_report["network"]["zone_count"] != env.zone_count
             or baseline_report["forecast"]["path"] != str(phase3.decision_time_forecasts_path)):
         raise RLWorkflowError("Phase 3 reference does not match the RL evaluation episode.")
+    expected_start = (phase3.evaluation_start_date or bundle.baseline.service_date).isoformat()
+    expected_end = (phase3.evaluation_end_date or bundle.baseline.service_date).isoformat()
+    if (
+        baseline_report["episode"].get("evaluation_start_date", expected_start) != expected_start
+        or baseline_report["episode"].get("evaluation_end_date", expected_end) != expected_end
+    ):
+        raise RLWorkflowError("Phase 3 reference date range differs from the RL evaluation window.")
     observations, _ = env.reset(options={"episode_index": 0}, seed=0)
     step_records: list[dict[str, Any]] = []
     latencies: list[float] = []
@@ -404,6 +428,8 @@ def evaluate(config_path: Path) -> dict[str, Any]:
         "mean_decision_latency_ms": float(np.mean(latencies)),
         "zone_fairness": _fairness(zone_rates[active_zone]),
         "region_fairness": _fairness(region_rates[active_region]),
+        "active_zone_count": int(active_zone.sum()),
+        "active_region_count": int(active_region.sum()),
     }
     references = baseline_report["metrics"]
     for name in ("no_rebalancing", "greedy", "min_cost_flow", "mpc"):
@@ -473,7 +499,9 @@ def evaluate(config_path: Path) -> dict[str, Any]:
         "policy_checkpoint_was_selected_on_training_only": True,
         "current_observation_excludes_realized_future_demand": True,
         "same_zone_graph_fleet_and_cost_contract_as_phase3": True,
-        "evaluation_uses_may_only": bundle.source == "validation",
+        "evaluation_uses_configured_split_only": (
+            bundle.source == bundle.baseline.evaluation_split
+        ),
     }
     if not all(invariants.values()):
         raise RLWorkflowError("One or more RL evaluation invariants failed.")
@@ -485,12 +513,19 @@ def evaluate(config_path: Path) -> dict[str, Any]:
         "selected_training_seed": metadata["seed"],
         "selected_checkpoint": str(config.selected_checkpoint),
         "strongest_phase3_optimizer": strongest_optimizer,
-        "comparison_criterion": "lowest_may_validation_operating_cost_among_min_cost_flow_and_mpc",
+        "comparison_criterion": (
+            "lowest_operating_cost_among_min_cost_flow_and_mpc_on_this_evaluation_window; "
+            "diagnostic_only_not_used_for_checkpoint_selection"
+        ),
         "methodology": {
             "training_data": "Feb-Apr TRAIN replay; seasonal profile fit from prior January TRAIN days",
             "training_proxy_intervals_calibrated": False,
-            "evaluation_data": "May validation; Phase2 archived P10/P50/P90",
-            "june_test_used": False,
+            "evaluation_data": (
+                f"{bundle.source} split; Phase2 archived decision-time P10/P50/P90"
+            ),
+            "evaluation_start_date": expected_start,
+            "evaluation_end_date": expected_end,
+            "evaluation_labels_used_for_training_or_seed_selection": False,
             "deterministic_inference": True,
             "fairness": "soft primal_dual_penalty; hard feasibility enforced by projection",
             "checkpoint_seed_chosen_by": "last_five_train_rollout_rewards_only",
