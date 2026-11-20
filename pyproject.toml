@@ -24,6 +24,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+rl = [
+    "gymnasium>=1.0,<2.0",
+    "torch>=2.3,<3.0",
+]
 dev = [
     "pytest",
     "pytest-cov",

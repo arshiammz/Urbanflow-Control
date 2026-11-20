@@ -954,3 +954,20 @@ python scripts/run_optimization_benchmark.py \
 
 The source package includes Phase 3 tests, but full all-zone numerical results
 must be generated on the project machine with the local Phase 2 Parquet data.
+
+---
+
+## Phase 4 — Constrained Deep Reinforcement Learning
+
+A Gymnasium environment and PyTorch PPO policy now sit on the exact Phase 3
+fleet simulator, full-zone graph, travel-time constraints, and Phase 2
+as-of quantile forecast interface. The learned policy proposes graph-edge
+relocation scores; an integer action projector enforces fleet, travel and
+relocation-budget constraints before every simulator step. Training is
+restricted to Jan–Apr demand and uses a clearly labeled train-only forecasting
+proxy; May P10/P50/P90 is reserved for the frozen evaluation against No
+Rebalancing, Greedy, Min-Cost Flow and MPC. No trained checkpoint or measured
+RL improvement is claimed until the real-data run completes.
+
+See **[Phase 4: Gymnasium + Constrained PPO](docs/phase4/README.md)** for
+architecture, chronology, limitations, training and evaluation commands.

@@ -266,7 +266,9 @@ def _load_decision_time_quantiles(
             pl.col("forecast_provenance").cast(pl.String),
         )
         .filter(
-            pl.col("decision_time").is_in(episode_timestamps)
+            pl.col("decision_time").is_between(
+                episode_timestamps[0], episode_timestamps[-1], closed="both"
+            )
             & pl.col("zone_id").is_in(list(zone_ids))
             & pl.col("horizon_step").is_between(1, horizon_steps, closed="both")
         )

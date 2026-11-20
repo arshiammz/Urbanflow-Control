@@ -1279,8 +1279,8 @@ def extract_episode(
         timestamps
     ):
         if (
-            current
-            - previous
+            current.astimezone(UTC)
+            - previous.astimezone(UTC)
         ) != expected_delta:
             raise RealEpisodeBaselineError(
                 "Episode intervals are not contiguous: "

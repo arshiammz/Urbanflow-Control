@@ -700,42 +700,20 @@ class FleetSimulator:
         travel_steps: IntegerMatrix,
     ) -> None:
         """Schedule every non-zero origin-destination flow."""
-        for origin in range(
-            self._zone_count
-        ):
-            for destination in range(
-                self._zone_count
-            ):
-                vehicle_count = int(
-                    flow_matrix[
-                        origin,
-                        destination,
-                    ]
-                )
-
-                if vehicle_count == 0:
-                    continue
-
-                duration = int(
-                    travel_steps[
-                        origin,
-                        destination,
-                    ]
-                )
-
-                if duration <= 0:
-                    raise FleetSimulationError(
-                        "Scheduled flow duration must be positive."
-                    )
-
-                self._schedule_arrival(
-                    arrival_step=(
-                        self._current_step
-                        + duration
-                    ),
-                    destination=destination,
-                    vehicle_count=vehicle_count,
-                )
+        # Iterate over actual flows, not every possible OD pair. This preserves
+        # the same deterministic schedule while making full-zone RL replay
+        # practical on a CPU (most OD entries are zero per 15-minute step).
+        origins, destinations = np.nonzero(flow_matrix)
+        for origin, destination in zip(origins, destinations, strict=True):
+            vehicle_count = int(flow_matrix[origin, destination])
+            duration = int(travel_steps[origin, destination])
+            if duration <= 0:
+                raise FleetSimulationError("Scheduled flow duration must be positive.")
+            self._schedule_arrival(
+                arrival_step=self._current_step + duration,
+                destination=int(destination),
+                vehicle_count=vehicle_count,
+            )
 
     def _build_passenger_flow(
         self,

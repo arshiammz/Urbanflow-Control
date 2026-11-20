@@ -1,0 +1,42 @@
+# Phase 4 -- train on Jan-Apr ONLY, evaluate on same May day as Phase 3.
+# Test/June remains untouched for policy selection.
+paths:
+  phase3_benchmark_config: configs/simulation/optimization_benchmark.yaml
+  checkpoint_directory: artifacts/models/constrained_ppo
+  selected_checkpoint: artifacts/models/constrained_ppo/champion_train_selected.pt
+  training_report: reports/rl/constrained_ppo_training.json
+  evaluation_report: reports/rl/constrained_ppo_vs_phase3_may_validation.json
+  evaluation_step_metrics: reports/rl/constrained_ppo_may_step_metrics.parquet
+  evaluation_zone_metrics: reports/rl/constrained_ppo_may_zone_metrics.parquet
+  evaluation_region_metrics: reports/rl/constrained_ppo_may_region_metrics.parquet
+  evaluation_action_metrics: reports/rl/constrained_ppo_may_actions.parquet
+
+training:
+  start_date: '2024-02-01'
+  end_date_inclusive: '2024-04-30'
+  seeds: [11, 23, 37]
+  ppo:
+    updates: 24
+    rollout_steps: 512
+    epochs: 4
+    minibatch_size: 128
+    learning_rate: 0.0003
+    gamma: 0.99
+    gae_lambda: 0.95
+    clip_epsilon: 0.20
+    entropy_coefficient: 0.001
+    value_coefficient: 0.5
+    max_gradient_norm: 0.5
+    dual_learning_rate: 0.10
+    dual_maximum: 5.0
+
+policy:
+  # Must match Phase 3 greedy risk_aversion; all other hard limits are reused too.
+  risk_aversion: 0.50
+  fairness_target_gap: 0.25
+  initial_fairness_multiplier: 0.5
+
+reward:
+  service_weight: 1.0
+  cost_weight: 1.0
+  idle_weight: 0.05
