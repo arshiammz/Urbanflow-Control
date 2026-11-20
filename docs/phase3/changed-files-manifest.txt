@@ -1,0 +1,18 @@
+NEW FILES
+configs/simulation/optimization_benchmark.yaml
+docs/phase3/README.md
+docs/phase3/IMPLEMENTATION_STATUS.md
+docs/phase3/changed-files-manifest.txt
+scripts/run_optimization_benchmark.py
+src/urbanflow/optimization/__init__.py
+src/urbanflow/optimization/min_cost_flow.py
+src/urbanflow/optimization/mpc.py
+src/urbanflow/simulation/optimization_benchmark.py
+tests/unit/optimization/test_min_cost_flow.py
+tests/unit/optimization/test_mpc.py
+tests/unit/simulation/test_optimization_benchmark_forecasts.py
+
+MODIFIED FILES
+README.md
+src/urbanflow/simulation/fleet_simulator.py
+tests/unit/simulation/test_fleet_simulator.py

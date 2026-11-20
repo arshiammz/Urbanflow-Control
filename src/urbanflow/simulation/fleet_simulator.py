@@ -528,6 +528,24 @@ class FleetSimulator:
             self._history
         )
 
+    @property
+    def pending_arrivals_by_step(self) -> dict[int, IntegerVector]:
+        """Return scheduled arrivals keyed by steps from the next transition.
+
+        Offset zero contains vehicles released at the beginning of the next
+        call to :meth:`step`. Returned arrays are copies, so callers cannot
+        mutate simulator state.
+        """
+        pending: dict[int, IntegerVector] = {}
+        for arrival_step, arrivals in self._arrival_schedule.items():
+            offset = arrival_step - self._current_step
+            if offset < 0:
+                raise FleetSimulationError(
+                    "Arrival schedule contains a step in the past."
+                )
+            pending[offset] = arrivals.copy()
+        return pending
+
     def _validate_probability_matrix(
         self,
         values: Any,

@@ -676,3 +676,37 @@ def test_rejects_relocation_across_non_adjacent_zone() -> None:
             demand=[0, 0, 0],
             relocation_action=[[0, 0, 1], [0, 0, 0], [0, 0, 0]],
         )
+
+
+def test_pending_arrivals_are_exposed_as_relative_step_offsets() -> None:
+    simulator = build_simulator()
+    action = np.zeros((3, 3), dtype=np.int64)
+    action[0, 2] = 2  # zone 101 -> 103 takes two simulation steps
+
+    simulator.step(
+        demand=[0, 0, 0],
+        relocation_action=action,
+    )
+
+    pending = simulator.pending_arrivals_by_step
+    assert set(pending) == {1}
+    assert pending[1].tolist() == [0, 0, 2]
+
+    # Returned arrays are defensive copies, not writable simulator state.
+    pending[1][2] = 0
+    assert simulator.pending_arrivals_by_step[1].tolist() == [0, 0, 2]
+
+
+def test_pending_arrivals_include_vehicles_released_on_next_transition() -> None:
+    simulator = build_simulator()
+    action = np.zeros((3, 3), dtype=np.int64)
+    action[0, 1] = 2  # zone 101 -> 102 takes one simulation step
+
+    simulator.step(
+        demand=[0, 0, 0],
+        relocation_action=action,
+    )
+
+    pending = simulator.pending_arrivals_by_step
+    assert set(pending) == {0}
+    assert pending[0].tolist() == [0, 2, 0]

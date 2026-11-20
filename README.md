@@ -915,3 +915,42 @@ UrbanFlow Control is being developed as a senior-level AI engineering project co
 The central engineering principle is simple:
 
 > **Do not stop at prediction. Measure whether the prediction improves the decision.**
+
+---
+
+# Phase 3 — Constrained Optimization Benchmark
+
+Phase 3 adds a direct comparison of four operational policies on top of the
+Phase 2 all-zone simulator and decision-time P10/P50/P90 forecasts:
+
+- **No Rebalancing** — no relocation actions;
+- **Greedy** — the existing Phase 2 forecast-guided policy;
+- **Min-Cost Flow** — global constrained allocation with relocation cost,
+  unmet-demand penalties, and borough-level fairness costs;
+- **MPC** — candidate-based receding-horizon planning with expected-value
+  simulation and a Greedy tail policy.
+
+All policies share the same initial fleet, actual demand, warmup, OD profile,
+travel-time matrices, graph constraints, and operating-cost coefficients.
+The benchmark reports service rate, unmet demand, operating cost, relocation
+work, zone/borough fairness, decision latency, and invariant checks.
+
+The MPC implementation is a transparent candidate-based approximation, not a
+claim of a globally optimal joint mixed-integer solution. It evaluates a small
+set of Min-Cost Flow first actions over the forecast horizon, rolls them forward
+using expected demand and historical OD/travel times, and applies only the
+selected first action.
+
+See [`docs/phase3/README.md`](docs/phase3/README.md) for the formulation,
+leakage controls, constraints, commands, output artifacts, and limitations.
+
+Run the benchmark after Phase 2's all-zone graph, quantile forecasts, and
+`decision_time_quantile_horizon` artifact have been built:
+
+```bash
+python scripts/run_optimization_benchmark.py \
+  --config configs/simulation/optimization_benchmark.yaml
+```
+
+The source package includes Phase 3 tests, but full all-zone numerical results
+must be generated on the project machine with the local Phase 2 Parquet data.
