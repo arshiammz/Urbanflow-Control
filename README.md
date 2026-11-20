@@ -1,1023 +1,274 @@
 # UrbanFlow Control
 
-**Forecast-Aware Fleet Rebalancing for NYC Ride Demand**
+**Forecast-aware fleet rebalancing for NYC ride-hailing — from spatiotemporal demand prediction to constrained operational decisions.**
 
-UrbanFlow Control is an end-to-end AI engineering project that turns **time-series demand forecasts into operational fleet-rebalancing decisions**.
+[![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Forecasting](https://img.shields.io/badge/Forecasting-XGBoost%20Quantiles-2F6F9F)](#spatiotemporal-forecasting)
+[![Optimization](https://img.shields.io/badge/Optimization-Min--Cost%20Flow%20%7C%20MPC-8267B2)](#optimization-engine)
+[![Deep RL](https://img.shields.io/badge/Deep%20RL-PPO%20%7C%20Gymnasium-9A6DB0)](#constrained-deep-reinforcement-learning)
 
-The project starts with more than **120 million NYC High Volume For-Hire Vehicle pickup events**, builds a leakage-safe 15-minute demand forecasting pipeline, evaluates strong forecasting baselines against XGBoost, simulates vehicle supply across city zones, and measures whether forecast-guided rebalancing actually improves service.
+UrbanFlow Control is an end-to-end research and engineering system that converts historical mobility data into **decision-time demand forecasts**, then uses those forecasts to construct and evaluate fleet-rebalancing actions under spatial, temporal, fleet and operating-cost constraints.
 
-> The goal is not only to predict demand.  
-> The goal is to use predictions to make better operational decisions.
+The system combines a leakage-aware data pipeline, graph-enhanced probabilistic forecasting, a discrete-event fleet simulator, mathematical optimization, constrained Deep Reinforcement Learning, and a production-oriented API/monitoring layer.
 
-> **Evaluation notice (Phase 1 correction):** Earlier May simulation results in
-> this README used future offline one-step forecasts and May-calibrated
-> predictions in a multi-step policy. They are **legacy preliminary numbers**,
-> not causal decision-time evidence. Use `docs/evaluation-protocol.md` and run
-> `scripts/build_asof_validation_forecasts.py`, then May validation/tuning and
-> frozen replay before replacing those figures with leakage-corrected results.
+> **Scope and evidence note** — This repository contains the implementation and reproducible workflows for the five development phases. The deterministic XGBoost benchmark below is a completed Jan–Jun 2024 development result. The July 2024 final holdout is deliberately separate: do not claim final five-policy or PPO performance until `scripts/run_final_holdout.py` has completed locally and its report has been reviewed. Simulator metrics are modeled estimates, not observed real-world service outcomes.
 
 ---
 
-## Project at a Glance
+## System overview
 
-```text
-NYC HVFHV Trip Data
-        │
-        ▼
-Data Validation & Auditing
-        │
-        ▼
-Zone × 15-Minute Demand Table
-        │
-        ▼
-Leakage-Safe Feature Engineering
-        │
-        ▼
-Demand Forecasting
-Baselines → XGBoost
-        │
-        ▼
-Historical OD Network
-        │
-        ▼
-Fleet Simulator
-        │
-        ▼
-No-Rebalancing Baseline
-        │
-        ▼
-Forecast-Guided Rebalancing
-        │
-        ▼
-Operational Evaluation
-```
+![UrbanFlow Control system architecture](assets/readme/01_system_overview.svg)
+
+### What the system does
+
+1. Ingests and validates NYC TLC High Volume For-Hire Vehicle (HVFHV) trip records.
+2. Builds a dense 15-minute pickup-demand panel for each eligible taxi zone.
+3. Generates leakage-safe temporal, weather-vintage and graph-neighbour features.
+4. Produces probabilistic demand forecasts (`P10`, `P50`, `P90`) and decision-time horizon inputs.
+5. Converts forecasted demand and current fleet state into feasible relocation plans.
+6. Replays policies in a simulator whose transitions use realized historical demand.
+7. Compares operational outcomes and exposes forecasting/planning services through an API and dashboard.
+
+## Architecture at a glance
+
+| Layer | Main components | Responsibility |
+|---|---|---|
+| Data engineering | Polars, PyArrow, DuckDB, TLC validation | Auditable trip ingestion, dense zone-time aggregation and data contracts |
+| Forecasting | XGBoost, quantile loss, temporal features | Zone-level demand distributions and multi-step decision-time forecasts |
+| Spatial context | TLC zone geometry, weighted k-nearest-neighbour graph | Neighbour-lag features and graph-constrained relocation feasibility |
+| Optimization | Greedy, Min-Cost Flow, MPC | Feasible vehicle redistribution under supply, travel and cost constraints |
+| Deep RL | Gymnasium, PyTorch PPO, action projection | Learned policy with hard action feasibility and a soft fairness objective |
+| Simulation | Fleet state, OD profile, travel-time steps | Consistent multi-step replay using realized historical demand |
+| Delivery & MLOps | FastAPI, Streamlit, Docker, MLflow, Prometheus | Serving interfaces, health/metrics, experiment tracking and artifact governance |
 
 ---
 
-# 1. What Is Time Series Forecasting?
+## Data foundation
 
-Time series data is data collected in chronological order.
+The primary demand source is the NYC Taxi & Limousine Commission's monthly **HVFHV trip-record dataset**. The original Jan–Jun 2024 forecasting panel contains:
 
-Examples include:
-
-- taxi demand every 15 minutes,
-- electricity consumption every hour,
-- website traffic every day,
-- product sales every week,
-- stock prices every minute.
-
-The objective of forecasting is simple:
-
-```text
-Past observations
-        +
-Patterns over time
-        +
-Context
-        ↓
-Prediction of future values
-```
-
-For UrbanFlow, the forecasting question is:
-
-> **How many ride requests will occur in each NYC zone during the next 15-minute interval?**
-
-![Time Series Forecasting Beginner Overview](docs/images/time_series_forecasting_overview.png)
-
-A time series may contain several important patterns:
-
-- **Trend** — long-term increase or decrease.
-- **Seasonality** — repeating daily, weekly, or yearly behavior.
-- **Lag dependence** — recent values help predict future values.
-- **Noise** — random variation that cannot be perfectly predicted.
-
-UrbanFlow converts these patterns into features that machine-learning models can learn from.
-
----
-
-# 2. UrbanFlow End-to-End Pipeline
-
-The project uses public NYC Taxi & Limousine Commission **High Volume For-Hire Vehicle (HVFHV)** trip records.
-
-The current forecasting dataset covers:
-
-```text
-Period:          January – June 2024
-Total pickups:   120,859,803
-Taxi zones:      262
-Time resolution: 15 minutes
-Dense rows:      4,576,616
-```
-
-The pipeline transforms raw trip records into a clean zone-level time series.
-
-![UrbanFlow Project Pipeline](docs/images/urbanflow_nyc_forecasting_pipeline.png)
-
-The main stages are:
-
-1. Load monthly HVFHV Parquet files.
-2. Validate schemas and timestamps.
-3. Audit missing, invalid, and duplicate data.
-4. Aggregate pickups by `zone_id × 15-minute interval`.
-5. Build a dense time grid including zero-demand intervals.
-6. Create historical forecasting features.
-7. Train and evaluate forecasting models.
-8. Build a supply-demand fleet simulator.
-9. Convert forecasts into rebalancing decisions.
-
----
-
-# 3. Leakage-Safe Forecasting
-
-Time-series evaluation must respect chronology.
-
-A random train/test split would allow information from the future to influence the past, producing unrealistic results.
-
-UrbanFlow therefore uses chronological splits:
-
-```text
-Jan – Apr 2024  → Training
-May 2024        → Validation
-June 2024       → Development Test
-```
-
-Feature engineering is also leakage-safe.
-
-Examples:
-
-```text
-pickup_count_lag_1
-pickup_count_lag_2
-pickup_count_lag_4
-pickup_count_lag_8
-
-pickup_count_lag_96
-pickup_count_lag_192
-pickup_count_lag_672
-
-rolling_mean_4
-rolling_mean_8
-rolling_mean_96
-rolling_mean_672
-```
-
-Rolling features are shifted before calculation so the current target value cannot leak into its own prediction.
-
-![Feature Engineering and Evaluation](docs/images/orecasting_feature_engineering_flowchart.png)
-
-Additional features include:
-
-- hour,
-- day of week,
-- cyclical time encodings,
-- zone identity,
-- historical rolling statistics.
-
----
-
-# 4. Forecasting Baselines
-
-A complex model is only useful if it beats simple alternatives.
-
-UrbanFlow evaluates several forecasting baselines.
-
-The strongest baseline is:
-
-```text
-Lag-1
-```
-
-which simply predicts:
-
-> The next 15-minute demand will be equal to the demand observed during the previous 15-minute interval.
-
-### Lag-1 Development-Test Performance
-
-| Metric | Result |
+| Dataset property | Value |
 |---|---:|
-| MAE | 5.3562 |
-| RMSE | 8.3184 |
-| WAPE | 20.08% |
+| Historical period | Jan–Jun 2024 |
+| Recorded pickup events | 120,859,803 |
+| TLC taxi zones in the dense panel | 262 |
+| Temporal resolution | 15 minutes |
+| Dense zone-interval rows | 4,576,616 |
 
----
+The pipeline validates source schemas and timestamps, audits invalid/duplicate records, aggregates pickups by `zone_id × interval_start`, and materializes zero-demand zone intervals. Simulation inputs separately define the fit-eligible zone set, zone ordering, OD profile and historical demand panel.
 
-# 5. XGBoost Demand Forecasting
+**Primary data sources**
 
-The main forecasting model is an XGBoost regressor trained on historical lag, rolling, calendar, and zone features.
+- [NYC TLC Trip Record Data](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page)
+- [Open-Meteo Single Runs API](https://open-meteo.com/en/docs/single-runs-api) for archived ECMWF IFS forecast vintages.
 
-Model selection uses training and validation data only.
+## Spatiotemporal forecasting
 
-The development-test period is not used for hyperparameter selection.
+![Spatiotemporal forecasting pipeline](assets/readme/02_forecasting_engine.svg)
 
-### XGBoost Results
+### Temporal feature contract
 
-| Metric | Lag-1 | XGBoost |
+The forecasting stack includes lagged demand, shifted rolling statistics, calendar encodings and zone identity. Rolling features are shifted so the target interval cannot contribute to its own inputs. Chronological splits are used; the final holdout is not used for model or policy selection.
+
+### Weather and spatial context
+
+- Weather features are joined from archived ECMWF IFS forecast runs using an explicit availability timestamp. A conservative six-hour publication delay is applied; a run is eligible only when `available_at <= decision_time`.
+- Weather archive coverage begins on 2024-03-14. Earlier intervals retain a missing-weather indicator rather than being filled with future observations or reanalysis.
+- The taxi-zone graph is derived from official zone centroids using a symmetric, distance-weighted k-nearest-neighbour construction.
+- Graph information enters the forecaster through neighbour-lag and neighbourhood-context features. **This is graph-enhanced global XGBoost, not a Graph Neural Network (GNN).**
+
+### Probabilistic outputs
+
+Three global XGBoost quantile models produce `P10`, `P50` and `P90` demand estimates. The pipeline checks finite/non-negative outputs and quantile ordering, and reports pinball loss, empirical coverage and interval width.
+
+The decision-time horizon builder uses the one-step quantile forecast as an anchor and a train-only weekly profile for future horizon steps. It does not use future realized demand or offline predictions whose lag features would have access to future observations. Horizon steps beyond the anchor are **profile-based projections**, not recursively re-inferred model forecasts with a fresh weather vintage at every step.
+
+## Optimization engine
+
+![Fleet decision and optimization stack](assets/readme/03_decision_stack.svg)
+
+The policy layer consumes a common contract:
+
+- Decision-time `P10/P50/P90` demand horizon by zone.
+- Available vehicles and scheduled in-transit arrivals.
+- Zone adjacency and OD travel-time steps.
+- Relocation budget, donor reserve, cost and fairness settings.
+
+Implemented policy families:
+
+- **Forecast-guided Greedy** — fast shortage/surplus-based relocation heuristic.
+- **Min-Cost Flow** — successive-shortest-augmenting-path transportation solver with explicit unserved-demand economics.
+- **Model Predictive Control (MPC)** — candidate-based receding-horizon evaluation; only the first action is executed before replanning.
+- **No Rebalancing** — operational reference policy.
+
+Hard action constraints include integer/non-negative moves, available donor supply, relocation budget, maximum travel steps, graph-edge feasibility and credit for in-transit vehicles. The benchmark is designed so policies share the same demand, initial fleet, warmup, OD/network and cost contracts.
+
+## Constrained Deep Reinforcement Learning
+
+![Constrained Deep RL architecture](assets/readme/04_constrained_deep_rl.svg)
+
+The RL implementation uses a custom **Gymnasium** fleet-rebalancing environment and a **PyTorch PPO** learner. The actor uses a shared zone encoder, an edge scorer informed by origin/destination representations and travel time, and a separate relocation-budget head. Continuous proposals are converted into integer OD actions by a deterministic projection layer before the simulator executes them.
+
+The environment observation includes zone-level supply, in-transit vehicles, forecast quantiles, uncertainty and historical service context. The current realized demand is not exposed to the policy observation; the simulator uses actual historical demand to advance the episode.
+
+The reward combines service, normalized operating cost, idle fleet and a primal-dual penalty for regional service-rate disparity. **Feasibility is hard-enforced by action projection; fairness is a soft objective, not a guarantee of equal service rates.**
+
+### RL training/evaluation boundary
+
+The supplied Phase 4 design trains three PPO seeds on Feb–Apr training episodes and selects a checkpoint using training rollouts only. Due to the absence of historical out-of-fold quantile forecasts for the training period, the training environment uses a documented train-only causal lag-1 seasonal proxy with an uncalibrated uncertainty augmentation. May/June inference uses the Phase 2 archived quantile forecasts. This creates a known training-to-inference distribution shift and should be considered when interpreting PPO results.
+
+The Phase 4 source documentation states that large-data NYC PPO training and the May comparison must be executed in the project environment before measured RL performance is claimed. A source implementation or synthetic unit test is not evidence of a successfully trained, validated agent.
+
+## Simulation and final evaluation
+
+![Evaluation and delivery architecture](assets/readme/05_evaluation_delivery.svg)
+
+The fleet simulator models zone-level available and in-transit vehicles, passenger trips, relocation trips, delayed arrivals, unmet demand, idle supply and operating costs. Core invariants include fleet conservation and `served + unmet = realized demand`.
+
+The final evaluation protocol reserves **July 1–31, 2024** as an untouched temporal holdout, with June 30 used as a single shared no-rebalancing warmup. The simulator carries fleet state continuously across the July episode; it is not reset each day. The intended comparison includes five policies: No Rebalancing, Greedy, Min-Cost Flow, MPC and the frozen train-selected Constrained PPO checkpoint.
+
+The final report is designed to include aggregate and daily service/cost metrics, zone and borough fairness, worst-day outcomes, bootstrap intervals, service-rate and cost CVaR, decision latency and process memory. Bootstrap samples are daily aggregates from a stateful episode and are temporally dependent; intervals are descriptive, not independent-day guarantees.
+
+### Stress scenarios
+
+The stress suite includes demand surge (+25%), forecast underestimation (−25%), fleet shortage (−20%), travel-time disruption (+50%) and graph edge loss (15%, preserving at least one neighbour per zone). The current stress runner compares the four Phase 3 optimization policies; it does not claim PPO stress robustness.
+
+## Historical forecasting benchmark
+
+The repository includes a completed deterministic XGBoost benchmark on the Jan–Jun 2024 panel. The reported `test` split is the June development-test period and has already been inspected; it is **not** the untouched July final holdout and is not a result for the later all-zone weather/quantile pipeline.
+
+| Metric | Lag-1 baseline | Raw XGBoost |
 |---|---:|---:|
 | MAE | 5.3562 | **4.1611** |
 | RMSE | 8.3184 | **6.6876** |
 | WAPE | 20.08% | **15.60%** |
 
-### Relative MAE Improvement
+Raw XGBoost reduced MAE by **22.31%** relative to the lag-1 baseline on that development-test split. The optional constrained low-demand calibration changed MAE only slightly and did not improve RMSE; it should not be presented as a universally superior model. See `reports/forecasting/2024-01_2024-06-final-model-comparison.json` for the exact comparison and segment summaries.
 
-```text
-22.31%
-```
+**No July five-policy operational result is published in this README.** Generate and review `reports/evaluation/2024-07-final-holdout.json` before adding final operational performance claims.
 
-The strongest learned features are overwhelmingly recent demand signals.
+## Reproducibility
 
-Top feature importance:
+### Environment
 
-```text
-pickup_count_lag_1
-pickup_count_rolling_mean_4
-pickup_count_lag_672
-pickup_count_lag_2
-zone_id
-pickup_count_lag_96
-```
-
-Approximately **95% of model importance** comes from the most recent lag and one-hour rolling mean.
-
-This makes the model particularly strong as a short-horizon demand nowcasting system.
-
----
-
-# 6. Forecast Error Analysis
-
-Aggregate accuracy alone is not enough.
-
-UrbanFlow evaluates errors across multiple demand regimes.
-
-The model shows a typical regression-to-the-mean pattern:
-
-```text
-Sparse demand zones
-→ slight overforecasting
-
-High-demand periods
-→ slight underforecasting
-```
-
-For example, high-demand intervals show larger absolute errors than low-demand intervals.
-
-This matters because forecasting errors can affect downstream fleet allocation differently.
-
-The project therefore evaluates both:
-
-```text
-Forecast Accuracy
-        ↓
-Operational Impact
-```
-
----
-
-# 7. Operational Calibration
-
-A validation-only residual calibration experiment was evaluated.
-
-Global calibration slightly improved average MAE but worsened high-demand underprediction.
-
-It was therefore rejected as a general model replacement.
-
-A constrained low-demand calibration was retained only as an optional operational adjustment.
-
-Development-test results:
-
-```text
-Raw XGBoost MAE:        4.1611
-Constrained MAE:        4.1584
-
-Improvement vs Lag-1:   22.36%
-```
-
-The calibration improves predictions mainly in sparse-demand conditions while leaving high-demand predictions unchanged.
-
-The core forecasting model remains the raw XGBoost model.
-
----
-
-# 8. From Forecasting to Decisions
-
-Forecast accuracy is useful only if it improves real decisions.
-
-UrbanFlow therefore contains a deterministic fleet simulator.
-
-The simulator tracks:
-
-- vehicles available in each zone,
-- vehicles currently in transit,
-- realized passenger demand,
-- passenger destination flows,
-- travel delays,
-- relocation travel delays,
-- unmet demand,
-- idle supply,
-- relocation cost,
-- fleet conservation.
-
-The total number of vehicles must always satisfy:
-
-```text
-Available Vehicles
-+
-In-Transit Vehicles
-=
-Total Fleet
-```
-
-Every simulator transition checks this invariant.
-
----
-
-# 9. Real NYC Simulation Environment
-
-Simulation inputs are constructed from real historical HVFHV trips.
-
-For the current experiment:
-
-```text
-Selected zones:              30
-Zone-selection period:       Jan – Apr 2024
-OD pairs:                    900
-Observed OD coverage:        100%
-Fallback OD pairs:           0
-Median travel time:          24.38 minutes
-```
-
-The 30 zones are selected using training-period demand only.
-
-The origin-destination matrix is also estimated only from the training period.
-
-Validation and test periods are not used to construct the network.
-
----
-
-# 10. No-Rebalancing Baseline
-
-The first operational benchmark assumes that no empty vehicles are repositioned.
-
-For the validation episode on May 15:
-
-```text
-Total fleet:            4,595
-
-Demand:                 222,659
-Served:                 131,212
-Unmet:                   91,447
-
-Service rate:             58.93%
-Average idle vehicles:     2,264
-```
-
-This result reveals the central decision problem.
-
-The system simultaneously has:
-
-```text
-Large unmet passenger demand
-+
-Large numbers of idle vehicles
-```
-
-The problem is therefore not simply insufficient fleet capacity.
-
-It is a **spatial supply-demand imbalance**.
-
----
-
-# 11. Forecast-Guided Rebalancing
-
-UrbanFlow uses demand predictions to identify zones expected to experience shortages or surpluses.
-
-The policy then relocates a limited number of available vehicles toward expected high-demand areas.
-
-![Forecast to Decision](docs/images/forecast_to_decision_fleet_rebalancing.png)
-
-The decision process is:
-
-```text
-Forecast future demand
-        ↓
-Observe current vehicle supply
-        ↓
-Estimate zone shortages / surpluses
-        ↓
-Generate feasible relocations
-        ↓
-Simulate realized demand
-        ↓
-Measure operational performance
-```
-
-Important constraints include:
-
-- vehicles cannot be created or destroyed,
-- relocation cannot exceed available supply,
-- relocation travel takes time,
-- passenger trips also take time,
-- realized demand drives simulator transitions,
-- forecasts influence decisions but do not replace actual demand.
-
----
-
-# 12. One-Day Operational Result (Legacy, Must Re-evaluate)
-
-On May 15:
-
-| Metric | No Rebalancing | Forecast-Guided |
-|---|---:|---:|
-| Service Rate | 58.93% | **77.60%** |
-| Served Demand | 131,212 | **172,780** |
-| Unmet Demand | 91,447 | **49,879** |
-| Average Idle Vehicles | 2,264 | **1,373** |
-| Operating Cost | 916,643 | **507,128** |
-
-### Improvement
-
-```text
-Unmet demand reduction:     45.46%
-Service-rate improvement:   +18.67 percentage points
-Operating-cost reduction:   44.68%
-```
-
-This was only an initial validation episode, so the policy was subsequently evaluated across a longer continuous validation window.
-
----
-
-# 13. Continuous Multi-Day Validation (Legacy, Must Re-evaluate)
-
-The forecast-guided heuristic was evaluated continuously from:
-
-```text
-May 2 – May 30, 2024
-```
-
-The fleet was **not reset between days**.
-
-This produces a more realistic long-running simulation.
-
-### Aggregate Results
-
-| Metric | No Rebalancing | Forecast-Guided |
-|---|---:|---:|
-| Served Demand | 3,877,229 | **4,977,127** |
-| Unmet Demand | 2,295,362 | **1,195,464** |
-| Service Rate | 62.81% | **80.63%** |
-| Average Idle Vehicles | 2,219 | **1,396** |
-| Operating Cost | 23.02M | **12.19M** |
-
-### Operational Improvement
-
-```text
-Unmet-demand reduction:       47.92%
-Service-rate improvement:     +17.82 percentage points
-Operating-cost reduction:     47.03%
-```
-
-### Robustness
-
-```text
-Validation days:                29
-Days reducing unmet demand:     29 / 29
-Days reducing operating cost:   29 / 29
-
-Median daily service improvement:
-+18.15 percentage points
-
-Worst day:
-+10.15 percentage points
-```
-
-These are **simulation results**, not claims about deployed production impact.
-
----
-
-# 14. Why This Project Is More Than Forecasting
-
-UrbanFlow deliberately separates two questions:
-
-### Prediction Question
-
-```text
-How accurately can future ride demand be predicted?
-```
-
-### Decision Question
-
-```text
-Can those predictions improve fleet allocation?
-```
-
-A model can have lower forecasting error without necessarily producing a better operational policy.
-
-The project therefore evaluates models using both:
-
-### Forecast Metrics
-
-- MAE
-- RMSE
-- WAPE
-- SMAPE
-- Bias
-
-### Decision Metrics
-
-- Served-demand rate
-- Unmet demand
-- Idle vehicles
-- Relocation vehicle-steps
-- Relocation cost
-- Total operating cost
-- Daily robustness
-
----
-
-# 15. Engineering Principles
-
-UrbanFlow follows several rules designed to keep offline evaluation credible.
-
-### Temporal Integrity
-
-```text
-No random time-series split
-No future target leakage
-No test-period tuning
-```
-
-### Simulator Integrity
-
-```text
-Vehicle conservation
-Non-negative supply
-Feasible relocation actions
-Deterministic state transitions
-```
-
-### Evaluation Integrity
-
-```text
-Same fleet for competing policies
-Same realized demand
-Same OD network
-Same warmup conditions
-```
-
-### Artifact Integrity
-
-Large generated artifacts are excluded from Git.
-
-The repository tracks:
-
-- source code,
-- configurations,
-- unit tests,
-- compact JSON reports,
-- documentation.
-
-Large Parquet datasets and model binaries remain reproducible local artifacts.
-
----
-
-# 16. Repository Structure
-
-```text
-Urbanflow-Control/
-├── configs/
-│   ├── forecasting/
-│   └── simulation/
-│
-├── data/
-│   ├── raw/
-│   └── processed/
-│
-├── artifacts/
-│   └── models/
-│
-├── reports/
-│   ├── forecasting/
-│   └── simulation/
-│
-├── scripts/
-│   ├── build_real_simulation_inputs.py
-│   ├── run_fleet_simulator_smoke.py
-│   ├── run_real_episode_baseline.py
-│   ├── run_forecast_guided_heuristic.py
-│   ├── run_forecast_guided_validation.py
-│   └── run_forecast_guided_tuning.py
-│
-├── src/
-│   └── urbanflow/
-│       ├── data/
-│       ├── forecasting/
-│       └── simulation/
-│
-├── tests/
-│   └── unit/
-│
-└── docs/
-    └── images/
-```
-
----
-
-# 17. Running the Project
-
-Activate the environment:
+Python 3.11+ is required. From the repository root:
 
 ```bash
+python -m venv .venv
 source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -e '.[dev,rl,api,dashboard,mlops]'
 ```
 
-Run linting:
+### Quality checks
 
 ```bash
-ruff check .
-```
-
-Run tests:
-
-```bash
+ruff check src scripts dashboards tests
 pytest -q
 ```
 
----
+### Build the July forecasting and simulation inputs
 
-## Build Real Simulation Inputs
-
-```bash
-python scripts/build_real_simulation_inputs.py
-```
-
----
-
-## Run the No-Rebalancing Baseline
-
-```bash
-python scripts/run_real_episode_baseline.py
-```
-
----
-
-## Run Forecast-Guided Rebalancing
-
-```bash
-python scripts/run_forecast_guided_heuristic.py
-```
-
----
-
-## Run Continuous Validation
-
-```bash
-python scripts/run_forecast_guided_validation.py
-```
-
----
-
-## Run Validation-Only Policy Tuning
-
-```bash
-python scripts/run_forecast_guided_tuning.py
-```
-
----
-
-# 18. Current Model Artifacts
-
-Forecast model:
-
-```text
-artifacts/models/xgboost-demand/model.ubj
-```
-
-Forecast metadata:
-
-```text
-artifacts/models/xgboost-demand/metadata.json
-```
-
-Operational calibration:
-
-```text
-artifacts/models/xgboost-demand/constrained_calibration.json
-```
-
-Large binary artifacts are intentionally excluded from version control.
-
----
-
-# 19. Current Project Status
-
-Completed:
-
-```text
-[x] Raw HVFHV ingestion
-[x] Schema validation
-[x] Multi-month 15-minute aggregation
-[x] DST-safe processing
-[x] Leakage-safe feature engineering
-[x] Temporal train / validation / test splits
-[x] Forecasting baselines
-[x] XGBoost forecasting
-[x] Error analysis
-[x] Residual calibration experiments
-[x] Deterministic fleet simulator
-[x] Historical OD network
-[x] Real-data simulation inputs
-[x] No-rebalancing operational baseline
-[x] Forecast-guided heuristic
-[x] Continuous multi-day validation
-```
-
-In progress:
-
-```text
-[ ] Validation-only heuristic parameter tuning
-[ ] Frozen heuristic configuration
-[ ] June policy evaluation
-[ ] Min-cost-flow optimization baseline
-[ ] Constrained RL environment
-[ ] Deep RL policy
-[ ] Optimization vs RL comparison
-[ ] Untouched July holdout
-[ ] FastAPI service
-[ ] Docker packaging
-[ ] Monitoring and dashboard
-```
-
----
-
-# 20. Planned Decision Baselines
-
-The final decision layer will compare:
-
-```text
-No Rebalancing
-        ↓
-Forecast-Guided Greedy
-        ↓
-Min-Cost Flow
-        ↓
-Constrained Deep RL
-```
-
-The objective is not to make RL look good.
-
-The objective is to determine whether the added complexity of RL produces meaningful operational value over strong optimization baselines.
-
----
-
-# 21. Holdout Policy
-
-June has already been inspected during development and should therefore be treated as a **development test period**.
-
-Before making final unbiased performance claims, the project will:
-
-1. freeze the forecasting and decision policies,
-2. acquire July 2024 data,
-3. avoid all July-based tuning,
-4. evaluate the frozen system once.
-
-This provides a final untouched temporal holdout.
-
----
-
-# 22. Limitations
-
-The simulator is intentionally transparent about its assumptions.
-
-### Fleet Supply
-
-HVFHV trip records contain completed trips but do not expose the true number of idle vehicles available at every moment.
-
-Therefore:
-
-> Fleet size and initial vehicle distribution are simulation assumptions, not reconstructed ground truth.
-
-### Passenger Waiting Time
-
-The current simulator measures unmet demand and service rate.
-
-It does not claim to reproduce actual passenger waiting times observed in production.
-
-### Forecast Availability
-
-Policy observations must only contain information that would have been available at decision time.
-
-Historical realized future demand is never used as a policy input.
-
-### Simulation Results
-
-Operational improvements reported here are simulated outcomes.
-
-They should not be interpreted as measured production savings.
-
----
-
-# 23. Key Takeaway
-
-UrbanFlow demonstrates an important distinction in applied AI:
-
-```text
-Prediction
-≠
-Decision
-```
-
-A forecasting system becomes operationally valuable only when its predictions can be converted into better actions.
-
-UrbanFlow therefore follows the complete chain:
-
-```text
-Raw Data
-→ Validation
-→ Time Series
-→ Forecasting
-→ Simulation
-→ Decision
-→ Operational Evaluation
-```
-
-The long-term objective is to answer a stronger question than:
-
-> “Can we forecast demand accurately?”
-
-The project asks:
-
-> **“Can a leakage-safe forecast help us make better fleet decisions under realistic constraints?”**
-
----
-
-# Phase 2 — Advanced Spatiotemporal Forecasting
-
-Phase 2 extends the Phase 1 causal forecasting path with: 
-
-- ECMWF IFS weather forecast vintages joined by their real availability time;
-- a geometry-derived taxi-zone k-nearest-neighbour graph and neighbour-lag features;
-- global XGBoost quantile models producing P10/P50/P90 demand;
-- decision-time quantile horizon outputs for downstream optimization/RL;
-- all fit-eligible TLC zones instead of a top-30 simulation subset;
-- graph-constrained relocation actions and configurable P50/P90 risk aversion.
-
-The current spatial model is a **graph-enhanced global XGBoost model**, not a
-Graph Neural Network. Its adjacency and quantile interfaces are designed so a
-GNN or RL policy can be added without changing the downstream forecast schema.
-
-See [`docs/phase2/README.md`](docs/phase2/README.md) for the architecture,
-leakage rules, commands, artifact paths, and test instructions. Phase 2 code is
-ready to run against the local TLC Parquet dataset; numerical training and
-all-zone simulation metrics must be generated on the project machine.
-
----
-
-## Tech Stack
-
-```text
-Python
-Polars
-NumPy
-XGBoost
-PyYAML
-Pytest
-Ruff
-Parquet
-Git / GitHub
-```
-
-Planned additions:
-
-```text
-SciPy / OR-Tools
-Gymnasium
-PyTorch
-Stable-Baselines3 or custom PPO
-FastAPI
-Docker
-MLflow
-```
-
----
-
-## Project Direction
-
-UrbanFlow Control is being developed as a senior-level AI engineering project combining:
-
-- Time Series Forecasting
-- Machine Learning
-- Optimization
-- Deep Reinforcement Learning
-- Simulation
-- Decision Support
-- MLOps
-- Reproducible Evaluation
-
-The central engineering principle is simple:
-
-> **Do not stop at prediction. Measure whether the prediction improves the decision.**
-
----
-
-# Phase 3 — Constrained Optimization Benchmark
-
-Phase 3 adds a direct comparison of four operational policies on top of the
-Phase 2 all-zone simulator and decision-time P10/P50/P90 forecasts:
-
-- **No Rebalancing** — no relocation actions;
-- **Greedy** — the existing Phase 2 forecast-guided policy;
-- **Min-Cost Flow** — global constrained allocation with relocation cost,
-  unmet-demand penalties, and borough-level fairness costs;
-- **MPC** — candidate-based receding-horizon planning with expected-value
-  simulation and a Greedy tail policy.
-
-All policies share the same initial fleet, actual demand, warmup, OD profile,
-travel-time matrices, graph constraints, and operating-cost coefficients.
-The benchmark reports service rate, unmet demand, operating cost, relocation
-work, zone/borough fairness, decision latency, and invariant checks.
-
-The MPC implementation is a transparent candidate-based approximation, not a
-claim of a globally optimal joint mixed-integer solution. It evaluates a small
-set of Min-Cost Flow first actions over the forecast horizon, rolls them forward
-using expected demand and historical OD/travel times, and applies only the
-selected first action.
-
-See [`docs/phase3/README.md`](docs/phase3/README.md) for the formulation,
-leakage controls, constraints, commands, output artifacts, and limitations.
-
-Run the benchmark after Phase 2's all-zone graph, quantile forecasts, and
-`decision_time_quantile_horizon` artifact have been built:
-
-```bash
-python scripts/run_optimization_benchmark.py \
-  --config configs/simulation/optimization_benchmark.yaml
-```
-
-The source package includes Phase 3 tests, but full all-zone numerical results
-must be generated on the project machine with the local Phase 2 Parquet data.
-
----
-
-## Phase 4 — Constrained Deep Reinforcement Learning
-
-A Gymnasium environment and PyTorch PPO policy now sit on the exact Phase 3
-fleet simulator, full-zone graph, travel-time constraints, and Phase 2
-as-of quantile forecast interface. The learned policy proposes graph-edge
-relocation scores; an integer action projector enforces fleet, travel and
-relocation-budget constraints before every simulator step. Training is
-restricted to Jan–Apr demand and uses a clearly labeled train-only forecasting
-proxy; May P10/P50/P90 is reserved for the frozen evaluation against No
-Rebalancing, Greedy, Min-Cost Flow and MPC. No trained checkpoint or measured
-RL improvement is claimed until the real-data run completes.
-
-See **[Phase 4: Gymnasium + Constrained PPO](docs/phase4/README.md)** for
-architecture, chronology, limitations, training and evaluation commands.
-
----
-
-## Phase 5 — Final Evaluation & Production Delivery
-
-Phase 5 adds the final untouched July 2024 evaluation workflow and a production
-serving/monitoring layer around the Phase 1–4 forecasting, simulator,
-optimization and constrained-PPO components.
-
-### Final holdout protocol
-
-- January–April: model training and train-only PPO selection.
-- May–June: quantile-model complexity selection and validation.
-- July 1–31: untouched final test period.
-- June 30: one shared no-rebalancing warmup before the July episode.
-- July simulator state is continuous; fleet state is not reset between days.
-
-The five-policy final evaluation compares No Rebalancing, Greedy, Min-Cost Flow,
-MPC and the frozen Constrained PPO checkpoint. It reports aggregate and daily
-service/cost metrics, bootstrap confidence intervals, service-rate and cost
-CVaR, worst-day performance, fairness, latency and memory profiling. Bootstrap
-intervals over daily metrics are descriptive because daily results are dependent
-inside the continuous episode.
-
-Build the July inputs/forecasts and run the final holdout:
+This workflow downloads monthly TLC Parquet files and archived weather vintages; allow sufficient disk space and network time.
 
 ```bash
 make build-july
+```
+
+The target builds the multi-month demand panel, forecasting features, simulation inputs, zone centroids/graph, as-of weather features, quantile models and decision-time horizon forecasts.
+
+### Train the Phase 4 PPO checkpoint (if it is not already available)
+
+```bash
+python scripts/train_constrained_ppo.py \
+  --config configs/rl/constrained_ppo.yaml
+```
+
+This must remain a train-only selection workflow. Do not use July labels to select PPO seeds, rewards or hyperparameters. The final-holdout runner expects the promoted train-selected checkpoint and its training report.
+
+### Run the untouched final holdout
+
+```bash
 make final-holdout
+```
+
+Equivalent command:
+
+```bash
+python scripts/run_final_holdout.py \
+  --config configs/evaluation/final_holdout_july.yaml
+```
+
+The runner fails closed if the dense July panel, warmup, decision-time forecasts, quantile provenance, frozen PPO checkpoint hash or shared policy contracts do not satisfy the evaluation protocol.
+
+### Run stress scenarios
+
+```bash
 make stress
 ```
 
-### Production components
+### Reports and artifacts
 
-- FastAPI endpoints for forecasts, zone status, rebalancing plans and one-step
-  simulator previews.
-- Streamlit map-based operational dashboard using taxi-zone centroids.
-- Docker Compose for API, dashboard, MLflow and Prometheus.
-- Train-only demand PSI reference and batch drift report.
-- SHA-256 model manifest, verification and rollback scripts.
-- GitHub Actions for Ruff, unit tests, static production checks and Docker build.
+Generated Parquet data, model checkpoints and large reports are intentionally local artifacts and are not required to be committed to Git. The final report and supporting artifacts are written under `reports/evaluation/`.
 
-See [`docs/phase5/README.md`](docs/phase5/README.md) for the complete runbook,
-API contracts, deployment guide, monitoring, model governance and limitations.
+## Serving and operations
 
-**Status note:** Phase 5 source/configuration and deployment workflows are
-included. The July data rebuild, final numerical holdout, stress scenarios,
-production manifest promotion and live API inference require the local Parquet
-files and trained model/checkpoint artifacts; no final July performance result
-is claimed until those commands complete successfully.
+### Docker Compose
+
+```bash
+cp .env.example .env
+# Set a long random URBANFLOW_API_KEY in .env before exposing the API.
+docker compose up --build -d
+docker compose ps
+```
+
+Local services:
+
+| Service | Default URL | Purpose |
+|---|---|---|
+| FastAPI | `http://localhost:8000` | Forecast, plan and simulation-preview endpoints |
+| Streamlit | `http://localhost:8501` | Operational dashboard |
+| MLflow | `http://localhost:5000` | Experiment/report tracking |
+| Prometheus | `http://localhost:9090` | API metrics |
+
+API endpoints include `/health`, `/ready`, `/metrics`, `/v1/models/current`, `/v1/zones`, `/v1/zones/{zone_id}/status`, `/v1/demand/forecast`, `/v1/rebalancing/plan` and `/v1/scenarios/simulate`.
+
+The model manifest records SHA-256 hashes for model files, metadata and graph artifacts; verification and rollback scripts are provided. Monitoring includes train-reference PSI and should be paired with residual, service-level and action-distribution monitoring.
+
+## Known limitations and interpretation
+
+- TLC completed-trip records are a proxy for demand; they do not provide live requests, live driver supply or observed wait times.
+- OD probabilities and travel-time steps are estimated from historical trips; they are not live traffic measurements.
+- The zone graph is centroid-based and feature-oriented; it is not a learned GNN.
+- Multi-step quantile horizons beyond the one-step anchor use a train-only weekly profile.
+- PPO training uses a causal training proxy while evaluation uses archived quantile forecasts; this distribution shift must be reported.
+- Fairness is partly a soft objective. Hard feasibility does not imply equal service across all zones or boroughs.
+- The API accepts a caller-supplied fleet snapshot. It is not connected to a live dispatch system, driver app or vehicle telemetry feed.
+- The dashboard uses zone centroids for visual context, not full taxi-zone polygon boundaries.
+- Docker Compose, MLflow and Prometheus provide local deployment infrastructure; shared production use still requires TLS, hardened authentication, rate limits, durable storage, secrets management and operational alerting.
+
+## Repository map
+
+```text
+src/urbanflow/
+  data/           ingestion, validation, aggregation, weather inputs
+  forecasting/   temporal features, XGBoost, quantile forecasting
+  geo/            taxi-zone graph construction
+  simulation/     fleet simulator and forecast-guided policy
+  optimization/   Min-Cost Flow and MPC
+  rl/             Gymnasium environment, PPO and action projection
+  evaluation/     forecast and operational error analysis
+  api/            FastAPI service and schemas
+  monitoring/     drift reports and model manifest controls
+
+configs/          data, forecasting, weather, simulation, RL and evaluation configs
+scripts/          reproducible build, training, benchmark and release workflows
+dashboards/        Streamlit operations dashboard
+docs/             data contracts, evaluation protocol, phase runbooks
+reports/          tracked lightweight reports; generated large outputs are local
+```
+
+## License
+
+This project is released under the [MIT License](LICENSE).
